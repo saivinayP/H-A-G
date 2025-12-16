@@ -1,0 +1,11 @@
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\Event.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\EventType.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\FinallyFinishedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\FinallyStartedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\IncludeExpandedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\ScreenshotCapturedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\StepFailedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\StepFinishedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\StepStartedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\TestFinishedEvent.java
+C:\Test Automation\H-A-G\hag-core\src\main\java\com\hag\core\reporting\events\TestStartedEvent.java

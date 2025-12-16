@@ -1,0 +1,11 @@
+com\hag\core\reporting\events\TestStartedEvent.class
+com\hag\core\reporting\events\FinallyFinishedEvent.class
+com\hag\core\reporting\events\FinallyStartedEvent.class
+com\hag\core\reporting\events\StepFinishedEvent.class
+com\hag\core\reporting\events\StepStartedEvent.class
+com\hag\core\reporting\events\Event.class
+com\hag\core\reporting\events\TestFinishedEvent.class
+com\hag\core\reporting\events\IncludeExpandedEvent.class
+com\hag\core\reporting\events\EventType.class
+com\hag\core\reporting\events\ScreenshotCapturedEvent.class
+com\hag\core\reporting\events\StepFailedEvent.class
