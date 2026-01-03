@@ -71,3 +71,8 @@ screenshots/
 .env
 *.local
 *.secret
+
+# =========================
+# class files
+# ==========================
+*.class

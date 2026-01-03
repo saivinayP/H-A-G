@@ -2,12 +2,15 @@ package com.hag.core.engine;
 
 import com.hag.core.engine.context.ExecutionContext;
 import com.hag.core.engine.dispatcher.ActionDispatcher;
+import com.hag.core.engine.dispatcher.ControlActions;
 import com.hag.core.engine.model.Step;
 import com.hag.core.engine.parser.CsvTestParser;
+import com.hag.core.engine.parser.IncludeResolver;
 import com.hag.core.reporting.engine.EventPublisher;
 import com.hag.core.reporting.events.*;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,15 +19,18 @@ public class DefaultExecutionEngine implements ExecutionEngine {
     private final EventPublisher eventPublisher;
     private final ActionDispatcher dispatcher;
     private final CsvTestParser parser;
+    private final IncludeResolver includeResolver;
 
     public DefaultExecutionEngine(
             EventPublisher eventPublisher,
             ActionDispatcher dispatcher,
-            CsvTestParser parser
+            CsvTestParser parser,
+            IncludeResolver includeResolver
     ) {
         this.eventPublisher = Objects.requireNonNull(eventPublisher);
         this.dispatcher = Objects.requireNonNull(dispatcher);
         this.parser = Objects.requireNonNull(parser);
+        this.includeResolver = Objects.requireNonNull(includeResolver);
     }
 
     @Override
@@ -33,32 +39,68 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         ExecutionContext context = new ExecutionContext();
         long testStartTime = System.currentTimeMillis();
 
-        eventPublisher.publish(
-                new TestStartedEvent(testName, testFile.toString(), "LOCAL")
-        );
+        publishTestStarted(testName, testFile);
 
-        List<Step> steps = parser.parse(testFile);
+        TestOutcome outcome = TestOutcome.PASSED;
+
+        List<Step> allSteps = parseAndPrepareSteps(testName, testFile);
+
+        StepFlowSplitter.Flow flow = StepFlowSplitter.split(allSteps);
 
         try {
-            for (Step step : steps) {
-                executeStep(testName, step, context);
-            }
-
-            eventPublisher.publish(
-                    new TestFinishedEvent(testName, "PASSED", testStartTime)
-            );
-
+            runSteps(testName, flow.main(), context);
         } catch (Exception ex) {
-
-            eventPublisher.publish(
-                    new TestFinishedEvent(testName, "FAILED", testStartTime)
-            );
-
-            throw new RuntimeException("Test execution failed", ex);
+            outcome = TestOutcome.FAILED;
+        } finally {
+            runFinallySteps(testName, flow.fin(), context);
+            publishTestFinished(testName, outcome, testStartTime);
         }
     }
 
-    private void executeStep(
+    /* =======================
+       Parsing & Preparation
+       ======================= */
+
+    private List<Step> parseAndPrepareSteps(String testName, Path testFile) {
+        List<Step> parsedSteps = parser.parse(testFile);
+        return expandIncludes(testName, parsedSteps, testFile.getParent());
+    }
+
+    private List<Step> expandIncludes(
+            String testName,
+            List<Step> steps,
+            Path baseDir
+    ) {
+        List<Step> resolved = new ArrayList<>();
+
+        for (Step step : steps) {
+            if (ControlActions.INCLUDE.equalsIgnoreCase(step.getAction())) {
+                resolved.addAll(
+                        includeResolver.resolve(testName, step, baseDir)
+                );
+            } else {
+                resolved.add(step);
+            }
+        }
+        return resolved;
+    }
+
+    /* =======================
+       Execution
+       ======================= */
+
+    private void runSteps(
+            String testName,
+            List<Step> steps,
+            ExecutionContext context
+    ) throws Exception {
+
+        for (Step step : steps) {
+            executeSingleStep(testName, step, context);
+        }
+    }
+
+    private void executeSingleStep(
             String testName,
             Step step,
             ExecutionContext context
@@ -114,5 +156,65 @@ public class DefaultExecutionEngine implements ExecutionEngine {
 
             throw ex;
         }
+    }
+
+    /* =======================
+       Finally handling
+       ======================= */
+
+    private void runFinallySteps(
+            String testName,
+            List<Step> finallySteps,
+            ExecutionContext context
+    ) {
+
+        if (finallySteps.isEmpty()) {
+            return;
+        }
+
+        eventPublisher.publish(new FinallyStartedEvent(testName));
+
+        for (Step step : finallySteps) {
+            try {
+                executeSingleStep(testName, step, context);
+            } catch (Exception ignored) {
+                // Finally must never fail the test
+            }
+        }
+
+        eventPublisher.publish(new FinallyFinishedEvent(testName));
+    }
+
+    /* =======================
+       Test lifecycle events
+       ======================= */
+
+    private void publishTestStarted(String testName, Path testFile) {
+        eventPublisher.publish(
+                new TestStartedEvent(
+                        testName,
+                        testFile.toString(),
+                        "LOCAL"
+                )
+        );
+    }
+
+    private void publishTestFinished(
+            String testName,
+            TestOutcome outcome,
+            long testStartTime
+    ) {
+        eventPublisher.publish(
+                new TestFinishedEvent(
+                        testName,
+                        outcome.name(),
+                        testStartTime
+                )
+        );
+    }
+
+    private enum TestOutcome {
+        PASSED,
+        FAILED
     }
 }
