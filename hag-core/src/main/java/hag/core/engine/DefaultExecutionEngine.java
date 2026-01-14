@@ -7,6 +7,7 @@ import hag.core.engine.dispatcher.ControlActions;
 import hag.core.engine.model.Step;
 import hag.core.engine.parser.CsvTestParser;
 import hag.core.engine.parser.IncludeResolver;
+import hag.core.engine.result.ExecutionResult;
 import hag.core.reporting.engine.EventPublisher;
 import hag.core.reporting.events.*;
 import hag.core.reporting.events.*;
@@ -124,7 +125,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
 
         try {
             Step resolvedStep = ResolvedStep.resolve(step, context);
-            dispatcher.dispatch(resolvedStep, context);
+            ExecutionResult result = dispatcher.dispatch(resolvedStep, context);
 
             eventPublisher.publish(
                     new StepFinishedEvent(

@@ -3,6 +3,7 @@ package hag.core.engine.dispatcher;
 import hag.core.engine.context.ExecutionContext;
 import hag.core.engine.executor.StepExecutor;
 import hag.core.engine.model.Step;
+import hag.core.engine.result.ExecutionResult;
 
 public class ActionDispatcher {
 
@@ -12,7 +13,7 @@ public class ActionDispatcher {
         this.registry = registry;
     }
 
-    public void dispatch(Step step, ExecutionContext context) throws Exception {
+    public ExecutionResult dispatch(Step step, ExecutionContext context) throws Exception {
         ActionCase parsed = ActionCase.parse(step.getAction());
 
         StepExecutor executor = registry
@@ -21,6 +22,6 @@ public class ActionDispatcher {
                         "No executor registered for action: " + parsed.getAction()
                 ));
 
-        executor.execute(step, context);
+        return executor.execute(step, context);
     }
 }
