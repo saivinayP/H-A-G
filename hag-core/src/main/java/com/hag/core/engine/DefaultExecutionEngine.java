@@ -1,6 +1,7 @@
 package com.hag.core.engine;
 
 import com.hag.core.engine.context.ExecutionContext;
+import com.hag.core.engine.context.ResolvedStep;
 import com.hag.core.engine.dispatcher.ActionDispatcher;
 import com.hag.core.engine.dispatcher.ControlActions;
 import com.hag.core.engine.model.Step;
@@ -121,7 +122,8 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         );
 
         try {
-            dispatcher.dispatch(step, context);
+            Step resolvedStep = ResolvedStep.resolve(step, context);
+            dispatcher.dispatch(resolvedStep, context);
 
             eventPublisher.publish(
                     new StepFinishedEvent(
