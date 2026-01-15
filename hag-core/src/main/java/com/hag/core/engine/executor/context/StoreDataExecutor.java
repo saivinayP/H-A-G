@@ -6,6 +6,8 @@ import com.hag.core.engine.executor.ContextStepExecutor;
 import com.hag.core.engine.model.Step;
 import com.hag.core.engine.result.EmptyExecutionResult;
 import com.hag.core.engine.result.ExecutionResult;
+import com.hag.core.engine.result.api.ApiExecutionResult;
+import com.hag.core.engine.executor.context.api.ApiResultExtractor;
 
 public class StoreDataExecutor implements ContextStepExecutor {
 
@@ -24,10 +26,28 @@ public class StoreDataExecutor implements ContextStepExecutor {
                         .toUpperCase()
         );
 
-        String key = step.getRecipient();
-        String value = step.getSource();
+        String targetKey = step.getRecipient();
+        String sourcePath = step.getSource();
 
-        context.getDataStore().put(scope, key, value);
+        if (scope == DataScope.API) {
+            ExecutionResult last = context.getLastResult();
+
+            if (!(last instanceof ApiExecutionResult apiResult)) {
+                throw new IllegalStateException(
+                        "Previous step did not produce API result"
+                );
+            }
+
+            Object extracted = ApiResultExtractor.extract(
+                    apiResult.getResponseBody(),
+                    sourcePath
+            );
+
+            context.getDataStore().put(scope, targetKey, extracted);
+        } else {
+            // existing GLOBAL / UI / DB handling (explicit values)
+            context.getDataStore().put(scope, targetKey, sourcePath);
+        }
 
         return EmptyExecutionResult.INSTANCE;
     }

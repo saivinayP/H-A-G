@@ -1,5 +1,7 @@
 package com.hag.core.engine.context;
 
+import com.hag.core.engine.result.ExecutionResult;
+
 public class ExecutionContext {
 
     private int currentStepIndex = 0;
@@ -20,5 +22,15 @@ public class ExecutionContext {
     public void reset() {
         currentStepIndex = 0;
         dataStore.clear();
+    }
+
+    private ExecutionResult lastResult;
+
+    public void setLastResult(ExecutionResult lastResult) {
+        this.lastResult = lastResult;
+    }
+
+    public ExecutionResult getLastResult() {
+        return lastResult;
     }
 }
