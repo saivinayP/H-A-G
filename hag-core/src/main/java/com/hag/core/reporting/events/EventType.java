@@ -1,0 +1,13 @@
+package com.hag.core.reporting.events;
+
+public enum EventType {
+    TEST_STARTED, TEST_FINISHED,
+
+    STEP_STARTED, STEP_FINISHED, STEP_FAILED,
+
+    SCREENSHOT_CAPTURED,
+
+    INCLUDE_EXPANDED,
+
+    FINALLY_STARTED, FINALLY_FINISHED
+}
