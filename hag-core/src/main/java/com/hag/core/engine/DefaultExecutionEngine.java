@@ -125,6 +125,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         try {
             Step resolvedStep = ResolvedStep.resolve(step, context);
             ExecutionResult result = dispatcher.dispatch(resolvedStep, context);
+            context.setLastResult(result);
 
             eventPublisher.publish(
                     new StepFinishedEvent(
