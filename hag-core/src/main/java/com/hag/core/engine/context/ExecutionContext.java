@@ -1,5 +1,6 @@
 package com.hag.core.engine.context;
 
+import com.hag.core.engine.adapter.UiAdapter;
 import com.hag.core.engine.result.ExecutionResult;
 import  java.util.Optional;
 
@@ -82,5 +83,15 @@ public class ExecutionContext {
 
     public ExecutionResult getLastResult() {
         return lastResult;
+    }
+
+    private UiAdapter uiAdapter;
+
+    public UiAdapter getUiAdapter() {
+        return uiAdapter;
+    }
+
+    public void setUiAdapter(UiAdapter uiAdapter) {
+        this.uiAdapter = uiAdapter;
     }
 }
