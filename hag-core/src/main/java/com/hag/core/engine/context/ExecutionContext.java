@@ -1,6 +1,7 @@
 package com.hag.core.engine.context;
 
 import com.hag.core.engine.adapter.ApiAdapter;
+import com.hag.core.engine.adapter.DbAdapter;
 import com.hag.core.engine.adapter.UiAdapter;
 import com.hag.core.engine.resolver.TestDataResolver;
 import com.hag.core.engine.result.ExecutionResult;
@@ -116,5 +117,15 @@ public class ExecutionContext {
 
     public void setApiAdapter(ApiAdapter apiAdapter) {
         this.apiAdapter = apiAdapter;
+    }
+
+    private DbAdapter dbAdapter;
+
+    public DbAdapter getDbAdapter() {
+        return dbAdapter;
+    }
+
+    public void setDbAdapter(DbAdapter dbAdapter) {
+        this.dbAdapter = dbAdapter;
     }
 }
