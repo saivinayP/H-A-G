@@ -1,6 +1,7 @@
 package com.hag.core.engine.context;
 
 import com.hag.core.engine.adapter.UiAdapter;
+import com.hag.core.engine.resolver.TestDataResolver;
 import com.hag.core.engine.result.ExecutionResult;
 import  java.util.Optional;
 
@@ -94,4 +95,15 @@ public class ExecutionContext {
     public void setUiAdapter(UiAdapter uiAdapter) {
         this.uiAdapter = uiAdapter;
     }
+
+    private TestDataResolver testDataResolver;
+
+    public TestDataResolver getTestDataResolver() {
+        return testDataResolver;
+    }
+
+    public void setTestDataResolver(TestDataResolver testDataResolver) {
+        this.testDataResolver = testDataResolver;
+    }
+
 }
