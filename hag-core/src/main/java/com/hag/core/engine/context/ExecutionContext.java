@@ -1,9 +1,11 @@
 package com.hag.core.engine.context;
 
+import com.hag.core.engine.adapter.ApiAdapter;
 import com.hag.core.engine.adapter.UiAdapter;
 import com.hag.core.engine.resolver.TestDataResolver;
 import com.hag.core.engine.result.ExecutionResult;
-import  java.util.Optional;
+
+import java.util.Optional;
 
 public class ExecutionContext {
 
@@ -18,9 +20,9 @@ public class ExecutionContext {
     /**
      * Resolves a value used in CSV.
      * Supports:
-     *  - ${VAR}
-     *  - ${SCOPE:VAR}
-     *  - literal values
+     * - ${VAR}
+     * - ${SCOPE:VAR}
+     * - literal values
      */
     public Object resolveValue(String input) {
 
@@ -106,4 +108,13 @@ public class ExecutionContext {
         this.testDataResolver = testDataResolver;
     }
 
+    private ApiAdapter apiAdapter;
+
+    public ApiAdapter getApiAdapter() {
+        return apiAdapter;
+    }
+
+    public void setApiAdapter(ApiAdapter apiAdapter) {
+        this.apiAdapter = apiAdapter;
+    }
 }
