@@ -128,4 +128,30 @@ public class ExecutionContext {
     public void setDbAdapter(DbAdapter dbAdapter) {
         this.dbAdapter = dbAdapter;
     }
+
+    /**
+     * Validates that all required runtime components
+     * are configured before execution begins.
+     *
+     * This method must be called once at the start
+     * of execution by the engine.
+     */
+    public void validateConfiguration() {
+
+        if (uiAdapter == null) {
+            throw new IllegalStateException("UiAdapter is not configured in ExecutionContext");
+        }
+
+        if (apiAdapter == null) {
+            throw new IllegalStateException("ApiAdapter is not configured in ExecutionContext");
+        }
+
+        if (dbAdapter == null) {
+            throw new IllegalStateException("DbAdapter is not configured in ExecutionContext");
+        }
+
+        if (testDataResolver == null) {
+            throw new IllegalStateException("TestDataResolver is not configured in ExecutionContext");
+        }
+    }
 }
