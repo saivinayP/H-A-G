@@ -2,6 +2,7 @@ package com.hag.ui.selenium;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hag.core.engine.adapter.UiAdapter;
+import com.hag.ui.selenium.ops.WindowOps;
 import org.openqa.selenium.*;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -20,6 +21,7 @@ public class SeleniumUiAdapter implements UiAdapter {
 
     public SeleniumUiAdapter(WebDriver driver) {
         this.driver = Objects.requireNonNull(driver);
+        this.windowOps = new WindowOps(driver, resolver);
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
