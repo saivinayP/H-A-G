@@ -256,6 +256,14 @@ public class DefaultExecutionEngine implements ExecutionEngine {
             long duration =
                     System.currentTimeMillis() - stepStartTime;
 
+            // Capture screenshot on failure
+            try {
+                byte[] screenshot = context.getUiAdapter().takeScreenshot();
+                // Logic to save file and publish ScreenshotCapturedEvent goes here
+            } catch (Exception e) {
+                // Log that screenshot failed, but don't let it swallow the original exception
+            }
+
             eventPublisher.publish(
                     new StepFailedEvent(
                             testName,
