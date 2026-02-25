@@ -8,7 +8,7 @@ public interface ActionRegistry {
 
     void register(Action action);
 
-    Optional<Action> resolve(String actionName);
+    Optional<Action> resolve(String name);
 
     void freeze();
 }
