@@ -1,13 +1,12 @@
 package com.hag.core.engine;
 
-import com.hag.core.engine.context.ExecutionContext;
-import com.hag.core.engine.context.ResolvedStep;
-import com.hag.core.engine.dispatcher.ActionDispatcher;
-import com.hag.core.engine.dispatcher.ControlActions;
-import com.hag.core.engine.model.Step;
-import com.hag.core.engine.parser.CsvTestParser;
-import com.hag.core.engine.parser.IncludeResolver;
-import com.hag.core.engine.result.ExecutionResult;
+import com.hag.core.context.ExecutionContext;
+import com.hag.core.model.Step;
+import com.hag.core.resolver.StepResolver;
+import com.hag.core.dispatcher.ActionDispatcher;
+import com.hag.core.parser.CsvTestParser;
+import com.hag.core.parser.IncludeResolver;
+import com.hag.core.result.ExecutionResult;
 import com.hag.core.reporting.engine.EventPublisher;
 import com.hag.core.reporting.events.*;
 
@@ -18,37 +17,16 @@ import java.util.Objects;
 
 /**
  * DefaultExecutionEngine
- *
- * Core orchestrator of test execution in H.A.G framework.
- *
- * Responsibilities:
- *  - Validate runtime configuration
- *  - Parse CSV test file
- *  - Expand include directives
- *  - Split normal and finally flows
- *  - Execute steps sequentially
- *  - Guarantee finally execution
- *  - Publish lifecycle events
- *
- * This class DOES NOT:
- *  - Contain UI/API/DB logic
- *  - Interpret business rules
- *  - Resolve locators
- *  - Perform HTTP or DB calls
- *
- * It only orchestrates execution.
+ * Core orchestrator of test execution.
+ * Pure orchestration — no business logic.
  */
-public class DefaultExecutionEngine implements ExecutionEngine {
+public final class DefaultExecutionEngine implements ExecutionEngine {
 
     private final EventPublisher eventPublisher;
     private final ActionDispatcher dispatcher;
     private final CsvTestParser parser;
     private final IncludeResolver includeResolver;
 
-    /**
-     * Constructor injection enforces immutability and
-     * ensures engine dependencies are always present.
-     */
     public DefaultExecutionEngine(
             EventPublisher eventPublisher,
             ActionDispatcher dispatcher,
@@ -61,22 +39,6 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         this.includeResolver = Objects.requireNonNull(includeResolver);
     }
 
-    /**
-     * Entry point for executing a test.
-     *
-     * Execution lifecycle:
-     *  1. Validate configuration
-     *  2. Publish TestStarted
-     *  3. Parse + expand includes
-     *  4. Split main and finally flows
-     *  5. Execute main steps
-     *  6. Always execute finally steps
-     *  7. Publish TestFinished
-     *
-     * If any main step fails:
-     *  - Test outcome becomes FAILED
-     *  - Exception is rethrown after finally execution
-     */
     @Override
     public void execute(
             String testName,
@@ -84,9 +46,10 @@ public class DefaultExecutionEngine implements ExecutionEngine {
             ExecutionContext context
     ) {
 
+        Objects.requireNonNull(testName, "testName must not be null");
+        Objects.requireNonNull(testFile, "testFile must not be null");
         Objects.requireNonNull(context, "ExecutionContext must not be null");
 
-        // Ensure adapters & resolvers are configured before execution begins
         context.validateConfiguration();
 
         long testStartTime = System.currentTimeMillis();
@@ -95,28 +58,24 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         TestOutcome outcome = TestOutcome.PASSED;
         Exception executionFailure = null;
 
-        // Parse CSV and resolve include directives
-        List<Step> allSteps =
+        List<Step> preparedSteps =
                 parseAndPrepareSteps(testName, testFile);
 
-        // Separate main flow and finally flow
         StepFlowSplitter.Flow flow =
-                StepFlowSplitter.split(allSteps);
+                StepFlowSplitter.split(preparedSteps);
 
         try {
-            runSteps(testName, flow.main(), context);
+            runMainSteps(testName, flow.main(), context);
         } catch (Exception ex) {
             outcome = TestOutcome.FAILED;
             executionFailure = ex;
         } finally {
 
-            // Finally steps must always execute regardless of failure
             runFinallySteps(testName, flow.fin(), context);
 
             publishTestFinished(testName, outcome, testStartTime);
         }
 
-        // Preserve original failure after lifecycle completion
         if (executionFailure != null) {
             throw new RuntimeException(executionFailure);
         }
@@ -126,27 +85,14 @@ public class DefaultExecutionEngine implements ExecutionEngine {
        Parsing & Include Resolution
        ========================================================== */
 
-    /**
-     * Parses the CSV file and expands include directives.
-     */
     private List<Step> parseAndPrepareSteps(
             String testName,
             Path testFile
     ) {
-
-        List<Step> parsedSteps = parser.parse(testFile);
-
-        return expandIncludes(
-                testName,
-                parsedSteps,
-                testFile.getParent()
-        );
+        List<Step> parsed = parser.parse(testFile);
+        return expandIncludes(testName, parsed, testFile.getParent());
     }
 
-    /**
-     * Replaces INCLUDE steps with actual resolved steps.
-     * Prevents nested include logic from leaking into execution layer.
-     */
     private List<Step> expandIncludes(
             String testName,
             List<Step> steps,
@@ -157,7 +103,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
 
         for (Step step : steps) {
 
-            if (ControlActions.INCLUDE.equalsIgnoreCase(step.getAction())) {
+            if ("INCLUDE".equalsIgnoreCase(step.getAction())) {
 
                 resolved.addAll(
                         includeResolver.resolve(
@@ -179,11 +125,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
        Step Execution
        ========================================================== */
 
-    /**
-     * Executes main steps sequentially.
-     * Stops execution on first failure.
-     */
-    private void runSteps(
+    private void runMainSteps(
             String testName,
             List<Step> steps,
             ExecutionContext context
@@ -194,15 +136,6 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         }
     }
 
-    /**
-     * Executes a single step and publishes step-level events.
-     *
-     * Execution contract:
-     *  - StepStartedEvent always emitted
-     *  - StepFinishedEvent always emitted
-     *  - StepFailedEvent emitted only on failure
-     *  - ExecutionResult stored in context
-     */
     private void executeSingleStep(
             String testName,
             Step step,
@@ -210,9 +143,8 @@ public class DefaultExecutionEngine implements ExecutionEngine {
     ) throws Exception {
 
         int stepIndex = context.nextStepIndex();
-        long stepStartTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
-        // Notify reporting layer that step has started
         eventPublisher.publish(
                 new StepStartedEvent(
                         testName,
@@ -226,26 +158,31 @@ public class DefaultExecutionEngine implements ExecutionEngine {
 
         try {
 
-            // Resolve placeholders and dynamic values
             Step resolvedStep =
-                    ResolvedStep.resolve(step, context);
+                    StepResolver.resolve(step, context);
 
-            // Dispatch to correct executor
             ExecutionResult result =
                     dispatcher.dispatch(resolvedStep, context);
 
-            // Persist result for future steps (StoreData, validation, etc.)
             context.setLastResult(result);
 
+            if (!result.isSuccess()) {
+                throw new RuntimeException(
+                        result.getMessage() != null
+                                ? result.getMessage()
+                                : "Step execution failed"
+                );
+            }
+
             long duration =
-                    System.currentTimeMillis() - stepStartTime;
+                    System.currentTimeMillis() - startTime;
 
             eventPublisher.publish(
                     new StepFinishedEvent(
                             testName,
                             stepIndex,
                             "PASSED",
-                            stepStartTime,
+                            startTime,
                             duration,
                             null
                     )
@@ -254,7 +191,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         } catch (Exception ex) {
 
             long duration =
-                    System.currentTimeMillis() - stepStartTime;
+                    System.currentTimeMillis() - startTime;
 
             eventPublisher.publish(
                     new StepFailedEvent(
@@ -270,7 +207,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
                             testName,
                             stepIndex,
                             "FAILED",
-                            stepStartTime,
+                            startTime,
                             duration,
                             ex.getMessage()
                     )
@@ -284,10 +221,6 @@ public class DefaultExecutionEngine implements ExecutionEngine {
        Finally Handling
        ========================================================== */
 
-    /**
-     * Executes finally steps.
-     * Failures inside finally block DO NOT fail the test.
-     */
     private void runFinallySteps(
             String testName,
             List<Step> finallySteps,
@@ -306,7 +239,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
             try {
                 executeSingleStep(testName, step, context);
             } catch (Exception ignored) {
-                // intentionally suppressed
+                // finally block never fails test
             }
         }
 
@@ -316,7 +249,7 @@ public class DefaultExecutionEngine implements ExecutionEngine {
     }
 
     /* ==========================================================
-       Test Lifecycle Events
+       Lifecycle Events
        ========================================================== */
 
     private void publishTestStarted(
@@ -346,9 +279,6 @@ public class DefaultExecutionEngine implements ExecutionEngine {
         );
     }
 
-    /**
-     * Internal outcome tracking.
-     */
     private enum TestOutcome {
         PASSED,
         FAILED
