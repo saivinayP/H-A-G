@@ -2,39 +2,42 @@ package com.hag.core.dispatcher;
 
 import com.hag.core.executor.Action;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class DefaultActionRegistry
         implements ActionRegistry {
 
     private final Map<String, Action> actions =
-            new ConcurrentHashMap<>();
+            new HashMap<>();
 
-    private volatile boolean frozen = false;
+    private boolean frozen = false;
 
     @Override
     public void register(Action action) {
 
         if (frozen) {
             throw new IllegalStateException(
-                    "Registry is frozen."
+                    "Registry is frozen. No further registrations allowed."
             );
         }
 
-        actions.put(action.name().toLowerCase(), action);
+        actions.put(
+                action.name().toUpperCase(),
+                action
+        );
     }
 
     @Override
-    public Optional<Action> resolve(String actionName) {
+    public Optional<Action> resolve(String name) {
         return Optional.ofNullable(
-                actions.get(actionName.toLowerCase())
+                actions.get(name.toUpperCase())
         );
     }
 
     @Override
     public void freeze() {
-        this.frozen = true;
+        frozen = true;
     }
 }
