@@ -26,10 +26,23 @@ public final class ExecutionResult {
         return new ExecutionResult(true, null, null);
     }
 
+    public static ExecutionResult success(String message) {
+        return new ExecutionResult(true, message, null);
+    }
+
     public static ExecutionResult success(
             Map<String, Object> data
     ) {
         return new ExecutionResult(true, null, data);
+    }
+
+    /**
+     * Indicates the action intentionally did not handle this step
+     * (e.g. a sub-case it does not own). The dispatcher may try
+     * another registered action with the same primary name.
+     */
+    public static ExecutionResult skipped() {
+        return new ExecutionResult(true, "SKIPPED", null);
     }
 
     public static ExecutionResult failure(
