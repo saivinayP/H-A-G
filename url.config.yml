@@ -1,0 +1,20 @@
+# HAG URL Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# Set active-environment to the environment you want to run tests against.
+# Add new environments as needed under the environments block.
+# ─────────────────────────────────────────────────────────────────────────────
+
+active-environment: dev
+
+environments:
+  dev:
+    application: https://dev.yourapp.com
+    api-base:    https://api-dev.yourapp.com
+
+  staging:
+    application: https://staging.yourapp.com
+    api-base:    https://api-staging.yourapp.com
+
+  prod:
+    application: https://yourapp.com
+    api-base:    https://api.yourapp.com

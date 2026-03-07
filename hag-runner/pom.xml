@@ -18,14 +18,13 @@
 
     <dependencies>
 
-        <!-- Core -->
+        <!-- ── H-A-G modules ──────────────────────────────────────────── -->
         <dependency>
             <groupId>com.hag</groupId>
             <artifactId>hag-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Executors -->
         <dependency>
             <groupId>com.hag</groupId>
             <artifactId>hag-ui</artifactId>
@@ -44,13 +43,25 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Test execution -->
+        <!-- ── Test execution ─────────────────────────────────────────── -->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
         </dependency>
 
-        <!-- Logging implementation -->
+        <!-- ── YAML config loading ────────────────────────────────────── -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- ── Logging ────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -67,5 +78,50 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- ── Maven Surefire — TestNG execution ─────────────────── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- TestNG suite file -->
+                    <suiteXmlFiles>
+                        <suiteXmlFile>src/main/resources/testng.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+
+                    <!-- System properties passed to tests -->
+                    <systemPropertyVariables>
+                        <browser>${browser}</browser>
+                        <headless>${headless}</headless>
+                        <env>${env}</env>
+                    </systemPropertyVariables>
+
+                    <!-- Parallel config — override via -Dthread.count=N -->
+                    <properties>
+                        <property>
+                            <name>dataproviderthreadcount</name>
+                            <value>${thread.count}</value>
+                        </property>
+                    </properties>
+
+                    <!-- Reuse JVM for performance -->
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <!-- ── Default property values (override on CLI with -D) ──────── -->
+    <properties>
+        <browser>chrome</browser>
+        <headless>false</headless>
+        <env>dev</env>
+        <thread.count>1</thread.count>
+    </properties>
 
 </project>
