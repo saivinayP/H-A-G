@@ -1,0 +1,39 @@
+Action,Recipient,Source,Key
+
+# ── CROSS-LAYER E2E — Login → UI Check → DB Validation ────────────────────────
+# 1. Authenticate via API to get a session token
+# 2. Open the browser and verify the dashboard is accessible
+# 3. Confirm the session was persisted to the database
+
+# Step 1 — API authentication
+SEND_REQUEST,templates/auth/login.json,testdata/users.json,validUser
+ASSERT_STATUS,,,200
+ASSERT_RESPONSE:NOT_NULL,data.token,,
+STORE_DATA:RESPONSE,data.token,,authToken
+STORE_DATA:RESPONSE,data.userId,,userId
+LOG,,,API auth OK — userId: ${API:userId}
+
+# Step 2 — Browser verification (dashboard accessible)
+NAVIGATE,,,${URL:application}/dashboard
+WAIT:VISIBLE,HomePage.welcomeBanner,,
+ASSERT_VISIBLE,HomePage.welcomeBanner,,
+GET_TEXT,HomePage.userName,,uiDisplayName
+ASSERT_TEXT:CONTAINS,HomePage.userName,,John
+LOG,,,UI check OK — displayed as: ${UI:uiDisplayName}
+
+# Step 3 — Database validation (session recorded)
+DB_QUERY:INLINE,,,SELECT id, user_id, status FROM sessions WHERE token = '${API:authToken}'
+ASSERT_ROW_COUNT,,,1
+ASSERT_COLUMN,status,,ACTIVE
+STORE_DATA:DB,id,,sessionId
+LOG,,,DB check OK — session id: ${DB:sessionId}
+
+# Step 4 — Cross-layer assertion (UI name matches DB user record)
+DB_QUERY,scripts/users/get_active_user.sql,,
+ASSERT_ROW_COUNT:NOT_ZERO,,,
+COMPARE:EQUALS,${API:userId},,${DB:id}
+
+FINALLY
+# Always logout — cleans up the session regardless of test outcome
+SEND_REQUEST,templates/auth/logout.json,,
+DB_EXECUTE:INLINE,,,DELETE FROM sessions WHERE token = '${API:authToken}'

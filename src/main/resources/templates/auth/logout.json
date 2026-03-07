@@ -1,0 +1,8 @@
+{
+  "_method":   "POST",
+  "_endpoint": "/api/v1/auth/logout",
+  "_headers": {
+    "Content-Type":  "application/json",
+    "Authorization": "Bearer ${API:authToken}"
+  }
+}
