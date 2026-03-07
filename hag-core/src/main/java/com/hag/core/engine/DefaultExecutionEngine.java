@@ -1,5 +1,6 @@
 package com.hag.core.engine;
 
+import com.hag.core.config.FrameworkConfig;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.model.Step;
 import com.hag.core.resolver.StepResolver;
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * DefaultExecutionEngine
@@ -26,17 +28,23 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
     private final ActionDispatcher dispatcher;
     private final CsvTestParser parser;
     private final IncludeResolver includeResolver;
+    private final FailureArtifactProvider artifactProvider;
+    private final FrameworkConfig config;
 
     public DefaultExecutionEngine(
             EventPublisher eventPublisher,
             ActionDispatcher dispatcher,
             CsvTestParser parser,
-            IncludeResolver includeResolver
+            IncludeResolver includeResolver,
+            FailureArtifactProvider artifactProvider,
+            FrameworkConfig config
     ) {
         this.eventPublisher = Objects.requireNonNull(eventPublisher);
         this.dispatcher = Objects.requireNonNull(dispatcher);
         this.parser = Objects.requireNonNull(parser);
         this.includeResolver = Objects.requireNonNull(includeResolver);
+        this.artifactProvider = Objects.requireNonNull(artifactProvider);
+        this.config = Objects.requireNonNull(config);
     }
 
     @Override
@@ -50,40 +58,51 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         Objects.requireNonNull(testFile, "testFile must not be null");
         Objects.requireNonNull(context, "ExecutionContext must not be null");
 
-        context.validateConfiguration();
-
-        long testStartTime = System.currentTimeMillis();
-        publishTestStarted(testName, testFile);
-
-        TestOutcome outcome = TestOutcome.PASSED;
-        Exception executionFailure = null;
-
-        List<Step> preparedSteps =
-                parseAndPrepareSteps(testName, testFile);
-
-        StepFlowSplitter.Flow flow =
-                StepFlowSplitter.split(preparedSteps);
-
         try {
-            runMainSteps(testName, flow.main(), context);
-        } catch (Exception ex) {
-            outcome = TestOutcome.FAILED;
-            executionFailure = ex;
+
+            ExecutionContextHolder.set(context);
+
+            context.validateConfiguration();
+
+            long testStartTime = System.currentTimeMillis();
+
+            publishTestStarted(testName, testFile);
+
+            TestOutcome outcome = TestOutcome.PASSED;
+            Exception executionFailure = null;
+
+            List<Step> preparedSteps =
+                    parseAndPrepareSteps(testName, testFile);
+
+            StepFlowSplitter.Flow flow =
+                    StepFlowSplitter.split(preparedSteps);
+
+            try {
+                runMainSteps(testName, flow.main(), context);
+            } catch (Exception ex) {
+                outcome = TestOutcome.FAILED;
+                executionFailure = ex;
+            } finally {
+
+                runFinallySteps(testName, flow.fin(), context);
+
+                publishTestFinished(
+                        testName,
+                        outcome,
+                        testStartTime
+                );
+            }
+
+            if (executionFailure != null) {
+                throw new RuntimeException(executionFailure);
+            }
+
         } finally {
-
-            runFinallySteps(testName, flow.fin(), context);
-
-            publishTestFinished(testName, outcome, testStartTime);
-        }
-
-        if (executionFailure != null) {
-            throw new RuntimeException(executionFailure);
+            ExecutionContextHolder.clear();
         }
     }
 
-    /* ==========================================================
-       Parsing & Include Resolution
-       ========================================================== */
+    /* ========================================================== */
 
     private List<Step> parseAndPrepareSteps(
             String testName,
@@ -121,9 +140,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         return resolved;
     }
 
-    /* ==========================================================
-       Step Execution
-       ========================================================== */
+    /* ========================================================== */
 
     private void runMainSteps(
             String testName,
@@ -166,11 +183,9 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             context.setLastResult(result);
 
-            if (!result.isSuccess()) {
-                throw new RuntimeException(
-                        result.getMessage() != null
-                                ? result.getMessage()
-                                : "Step execution failed"
+            if (result.isFailure()) {
+                throw new StepExecutionException(
+                        result.getMessage()
                 );
             }
 
@@ -193,6 +208,18 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             long duration =
                     System.currentTimeMillis() - startTime;
 
+            Optional<Path> artifact = Optional.empty();
+
+            if (artifactProvider != null) {
+                try {
+                    artifact = artifactProvider.capture(
+                            testName,
+                            stepIndex,
+                            context
+                    );
+                } catch (Exception ignored) {}
+            }
+
             eventPublisher.publish(
                     new StepFailedEvent(
                             testName,
@@ -209,7 +236,8 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                             "FAILED",
                             startTime,
                             duration,
-                            ex.getMessage()
+                            artifact.map(Path::toString)
+                                    .orElse(ex.getMessage())
                     )
             );
 
@@ -217,9 +245,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         }
     }
 
-    /* ==========================================================
-       Finally Handling
-       ========================================================== */
+    /* ========================================================== */
 
     private void runFinallySteps(
             String testName,
@@ -248,9 +274,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         );
     }
 
-    /* ==========================================================
-       Lifecycle Events
-       ========================================================== */
+    /* ========================================================== */
 
     private void publishTestStarted(
             String testName,

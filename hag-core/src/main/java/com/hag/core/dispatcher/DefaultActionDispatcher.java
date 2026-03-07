@@ -3,39 +3,72 @@ package com.hag.core.dispatcher;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.dispatcher.descriptor.ActionDescriptorParser;
+import com.hag.core.dispatcher.descriptor.ModifierSet;
+import com.hag.core.dispatcher.retry.RetryExecutor;
 import com.hag.core.executor.Action;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
-public final class DefaultActionDispatcher
-        implements ActionDispatcher {
+/**
+ * Default dispatcher — parses the Action column, resolves Source modifiers,
+ * looks up the registered action by name, and delegates execution.
+ *
+ * <p>Dispatch sequence:
+ * <ol>
+ *   <li>Parse {@code ACTION:SUBCASE} from the step's Action column</li>
+ *   <li>Parse Source column into a {@link ModifierSet} and attach to the step</li>
+ *   <li>Resolve the action from the {@link ActionRegistry} by primary name</li>
+ *   <li>Execute with optional retry</li>
+ * </ol>
+ */
+public final class DefaultActionDispatcher implements ActionDispatcher {
 
     private final ActionRegistry registry;
-    private final ActionDescriptorParser parser =
-            new ActionDescriptorParser();
 
     public DefaultActionDispatcher(ActionRegistry registry) {
         this.registry = registry;
     }
 
     @Override
-    public ExecutionResult dispatch(
-            Step step,
-            ExecutionContext context
-    ) {
+    public ExecutionResult dispatch(Step step, ExecutionContext context) {
 
+        // Parse ACTION:SUBCASE from the Action column (static call)
         ActionDescriptor descriptor =
-                parser.parse(step.getAction());
+                ActionDescriptorParser.parse(step.getAction());
 
-        Action action =
-                registry.resolve(descriptor.name())
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "No action registered: "
-                                                + descriptor.name()
-                                )
-                        );
+        // Parse Source column into ModifierSet and attach to the step
+        ModifierSet modifiers =
+                ActionDescriptorParser.parseModifiers(step.getSource());
+        step.setModifiers(modifiers);
 
-        return action.execute(step, context);
+        // Resolve the action — look up by primary name only
+        Action action = registry
+                .resolve(descriptor.name())
+                .orElseThrow(() -> new IllegalStateException(
+                        "No action registered for: [" + descriptor.name()
+                                + "]. Full action string: [" + step.getAction() + "]"
+                ));
+
+        // Sub-case validation is delegated to the action implementation
+        int retryCount = resolveRetryCount(modifiers);
+
+        return RetryExecutor.executeWithRetry(
+                retryCount,
+                () -> action.execute(step, descriptor, context)
+        );
+    }
+
+    /**
+     * Reads the {@code retry=N} parameter from the Source-column modifiers.
+     * Defaults to 1 (no retry) if absent or unparseable.
+     */
+    private int resolveRetryCount(ModifierSet modifiers) {
+        String retryParam = modifiers.getParameter("retry");
+        if (retryParam == null) return 1;
+        try {
+            return Math.max(Integer.parseInt(retryParam), 1);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
     }
 }

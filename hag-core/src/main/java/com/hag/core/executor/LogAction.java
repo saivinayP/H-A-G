@@ -1,8 +1,7 @@
 package com.hag.core.executor;
 
 import com.hag.core.context.ExecutionContext;
-import com.hag.core.executor.Action;
-import com.hag.core.executor.ActionCategory;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
@@ -21,18 +20,20 @@ public final class LogAction implements Action {
     @Override
     public ExecutionResult execute(
             Step step,
+            ActionDescriptor descriptor,
             ExecutionContext context
     ) {
 
-        String message = step.getKey();
+        Object message =
+                context.resolveValue(step.getKey());
 
-        if (message == null || message.isBlank()) {
+        if (message == null) {
             return ExecutionResult.failure(
-                    "LOG action requires message in key field"
+                    "LOG requires message in key field"
             );
         }
 
-        System.out.println("[HAG-LOG] " + message);
+        System.out.println("[HAG] " + message);
 
         return ExecutionResult.success();
     }

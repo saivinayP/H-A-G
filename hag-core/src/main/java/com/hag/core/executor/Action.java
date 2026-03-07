@@ -1,6 +1,7 @@
 package com.hag.core.executor;
 
 import com.hag.core.context.ExecutionContext;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
@@ -12,6 +13,7 @@ public interface Action {
 
     ExecutionResult execute(
             Step step,
+            ActionDescriptor descriptor,
             ExecutionContext context
     );
 }

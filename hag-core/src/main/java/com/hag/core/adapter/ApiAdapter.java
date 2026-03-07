@@ -1,12 +1,13 @@
 package com.hag.core.adapter;
 
-import java.util.Map;
-
+/**
+ * Marker interface for API capability provider.
+ */
 public interface ApiAdapter {
 
-    ApiResponse send(
-            String requestPayload,
-            Map<String, String> headers,
-            String endpointHint
-    );
+    /**
+     * Executes a request object and returns raw response.
+     * Concrete implementation defines request/response type.
+     */
+    Object execute(Object request);
 }

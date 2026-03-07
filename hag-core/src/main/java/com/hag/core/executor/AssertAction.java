@@ -1,23 +1,13 @@
 package com.hag.core.executor;
 
 import com.hag.core.context.ExecutionContext;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
 import java.util.Objects;
 
-/**
- * ASSERT Action
- *
- * CSV Format:
- * ASSERT,actual,,expected
- * ASSERT,actual,CONTAINS,expected
- *
- * Default operator: EQUALS
- */
 public final class AssertAction implements Action {
-
-    private static final String DEFAULT_OPERATOR = "EQUALS";
 
     @Override
     public String name() {
@@ -32,6 +22,7 @@ public final class AssertAction implements Action {
     @Override
     public ExecutionResult execute(
             Step step,
+            ActionDescriptor descriptor,
             ExecutionContext context
     ) {
 
@@ -42,15 +33,16 @@ public final class AssertAction implements Action {
                 context.resolveValue(step.getKey());
 
         String operator =
-                step.getSource() == null || step.getSource().isBlank()
-                        ? DEFAULT_OPERATOR
-                        : step.getSource().trim().toUpperCase();
+                descriptor.getParameter("op") != null
+                        ? descriptor.getParameter("op").toUpperCase()
+                        : "EQUALS";
 
         boolean result = evaluate(operator, actual, expected);
 
         if (!result) {
             return ExecutionResult.failure(
-                    buildFailureMessage(operator, actual, expected)
+                    "ASSERT failed [" + operator + "] actual=<"
+                            + actual + "> expected=<" + expected + ">"
             );
         }
 
@@ -64,6 +56,7 @@ public final class AssertAction implements Action {
     ) {
 
         return switch (operator) {
+
             case "EQUALS" ->
                     Objects.equals(actual, expected);
 
@@ -78,23 +71,9 @@ public final class AssertAction implements Action {
 
             default ->
                     throw new IllegalArgumentException(
-                            "Unsupported ASSERT operator: " + operator
+                            "Unsupported ASSERT operator: "
+                                    + operator
                     );
         };
-    }
-
-    private String buildFailureMessage(
-            String operator,
-            Object actual,
-            Object expected
-    ) {
-
-        return "ASSERT failed: ["
-                + operator
-                + "] actual=<"
-                + actual
-                + "> expected=<"
-                + expected
-                + ">";
     }
 }
