@@ -1,8 +1,8 @@
 package com.hag.runner.bootstrap;
 
+import com.hag.api.bootstrap.ApiBootstrap;
 import com.hag.core.bootstrap.CoreBootstrap;
 import com.hag.core.config.FrameworkConfig;
-import com.hag.core.dispatcher.ActionRegistry;
 import com.hag.core.dispatcher.DefaultActionDispatcher;
 import com.hag.core.dispatcher.DefaultActionRegistry;
 import com.hag.core.engine.DefaultExecutionEngine;
@@ -10,45 +10,81 @@ import com.hag.core.engine.ExecutionEngine;
 import com.hag.core.engine.FailureArtifactProvider;
 import com.hag.core.parser.CsvTestParser;
 import com.hag.core.parser.IncludeResolver;
+import com.hag.core.reporting.engine.ConsoleReportEngine;
+import com.hag.core.reporting.engine.DefaultEventPublisher;
 import com.hag.core.reporting.engine.EventPublisher;
+import com.hag.db.bootstrap.DbBootstrap;
+import com.hag.runner.config.ConfigLoader;
+import com.hag.runner.config.ConfigLoader.DbConnectionConfig;
 import com.hag.ui.bootstrap.UiBootstrap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
- * FrameworkBootstrap
- *
- * Single composition root.
- * Wires core + UI + engine.
+ * FrameworkBootstrap — single composition root that wires the full H-A-G stack.
  */
 public final class FrameworkBootstrap {
 
+    private static final Logger LOG = LoggerFactory.getLogger(FrameworkBootstrap.class);
+
     private FrameworkBootstrap() {}
 
+    /**
+     * Creates a fully-wired {@link ExecutionEngine} using config files
+     * in the current working directory.
+     */
+    public static ExecutionEngine createEngine(FailureArtifactProvider artifactProvider) {
+        return createEngine(artifactProvider, System.getProperty("user.dir"));
+    }
+
+    /**
+     * Creates a fully-wired {@link ExecutionEngine} from {@code projectRoot}.
+     *
+     * @param artifactProvider failure screenshot provider (can be {@code null} for API-only)
+     * @param projectRoot      directory containing url/runner/testdata config files
+     */
     public static ExecutionEngine createEngine(
-            EventPublisher eventPublisher,
-            CsvTestParser parser,
-            IncludeResolver includeResolver,
             FailureArtifactProvider artifactProvider,
-            FrameworkConfig config
+            String projectRoot
     ) {
+        LOG.info("HAG → Bootstrap starting from: {}", projectRoot);
 
-        // 1️⃣ Create registry
-        ActionRegistry registry =
-                new DefaultActionRegistry();
+        // ── Config ───────────────────────────────────────────────────────
+        FrameworkConfig config = ConfigLoader.load(projectRoot);
 
-        // 2️⃣ Register core actions
+        // ── Action registry ──────────────────────────────────────────────
+        DefaultActionRegistry registry = new DefaultActionRegistry();
+
         CoreBootstrap.registerCoreActions(registry);
+        LOG.info("HAG → Core actions registered");
 
-        // 3️⃣ Register UI actions
         UiBootstrap.registerUiActions(registry);
+        LOG.info("HAG → UI actions registered (23)");
 
-        // 4️⃣ Freeze registry before use
+        ApiBootstrap.registerApiActions(registry);
+        LOG.info("HAG → API actions registered");
+
+        DbBootstrap.registerDbActions(registry);
+        LOG.info("HAG → DB actions registered");
+
         registry.freeze();
 
-        // 5️⃣ Create dispatcher
-        DefaultActionDispatcher dispatcher =
-                new DefaultActionDispatcher(registry);
+        // ── Dispatcher & parser ──────────────────────────────────────────
+        DefaultActionDispatcher dispatcher = new DefaultActionDispatcher(registry);
+        CsvTestParser           parser     = new CsvTestParser();
 
-        // 6️⃣ Create execution engine
+        // ── Event publishing ─────────────────────────────────────────────
+        EventPublisher eventPublisher = new DefaultEventPublisher(
+                List.of(new ConsoleReportEngine())
+        );
+
+        // ── Include resolver ─────────────────────────────────────────────
+        IncludeResolver includeResolver = new IncludeResolver(parser, eventPublisher);
+
+        LOG.info("HAG → Bootstrap complete");
+
         return new DefaultExecutionEngine(
                 eventPublisher,
                 dispatcher,
@@ -57,5 +93,12 @@ public final class FrameworkBootstrap {
                 artifactProvider,
                 config
         );
+    }
+
+    /**
+     * Loads DB connection config exposed for per-thread adapter wiring in HagTestBase.
+     */
+    public static DbConnectionConfig loadDbConfig(String projectRoot) {
+        return ConfigLoader.loadDbConfig(projectRoot);
     }
 }

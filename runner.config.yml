@@ -1,0 +1,15 @@
+# HAG Runner Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# Controls browser settings, timeouts, retry behaviour, and screenshot output.
+# ─────────────────────────────────────────────────────────────────────────────
+
+browser:
+  type: chrome           # chrome | firefox | edge
+  headless: false        # true for CI environments
+
+execution:
+  timeout-seconds: 30    # default Selenium wait timeout
+  retry-attempts: 1      # number of retry attempts per step on failure
+
+screenshots:
+  directory: target/screenshots   # relative to project root
