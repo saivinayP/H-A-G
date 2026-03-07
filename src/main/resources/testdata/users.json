@@ -1,0 +1,20 @@
+{
+  "validUser": {
+    "username": "john@example.com",
+    "password": "Secret@123",
+    "displayName": "John Doe"
+  },
+  "adminUser": {
+    "username": "admin@example.com",
+    "password": "Admin@999",
+    "displayName": "System Admin"
+  },
+  "lockedUser": {
+    "username": "locked@example.com",
+    "password": "Secret@123"
+  },
+  "wrongPassword": {
+    "username": "john@example.com",
+    "password": "WrongPass!"
+  }
+}

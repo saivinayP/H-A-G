@@ -1,0 +1,7 @@
+{
+  "welcomeBanner":  { "type": "css",   "value": ".welcome-banner" },
+  "userName":       { "type": "css",   "value": ".user-display-name" },
+  "logoutButton":   { "type": "id",    "value": "logoutBtn" },
+  "navMenu":        { "type": "css",   "value": "nav.main-nav" },
+  "ordersLink":     { "type": "xpath", "value": "//a[text()='Orders']" }
+}

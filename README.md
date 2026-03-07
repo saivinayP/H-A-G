@@ -1,54 +1,57 @@
 # H-A-G — Hybrid Automation Grid
 
-**H-A-G** is a unified, data-driven test automation platform that lets teams write UI, API, and Database tests in plain **CSV files** — no programming required. A single orchestration layer handles Selenium, REST/SOAP, and JDBC automatically based on your test steps.
+> **One CSV. Any layer. Zero code.**
+
+H-A-G is a unified, data-driven test automation platform. Write UI, API, and Database tests as plain **CSV files** and H-A-G orchestrates Selenium, RestAssured, and JDBC automatically — no programming required for testers.
 
 ```csv
 Action,Recipient,Source,Key
 
-# Login via API — get a token
+# 1. Login via API — capture the auth token
 SEND_REQUEST,templates/auth/login.json,testdata/users.json,adminUser
 ASSERT_STATUS,,,200
 STORE_DATA:RESPONSE,data.token,,authToken
 
-# Verify in the browser
+# 2. Verify the session in the browser
 NAVIGATE,,,${URL:application}/dashboard
 ASSERT_VISIBLE,DashboardPage.welcomeBanner,,
+ASSERT_TEXT:CONTAINS,DashboardPage.userName,,Admin
 
-# Confirm in the database
+# 3. Confirm the session was written to the database
 DB_QUERY:INLINE,,,SELECT * FROM sessions WHERE token = '${API:authToken}'
 ASSERT_ROW_COUNT,,,1
+ASSERT_COLUMN,status,,ACTIVE
+
+FINALLY
+NAVIGATE,,,${URL:application}/logout
 ```
 
 ---
 
-## Features
+## What's Built
 
-| Layer | Status | Description |
+| Layer | Status | Actions |
 |---|---|---|
-| **UI** | ✅ Ready | Selenium-based — 18 actions registered |
-| **API** | 🔜 Planned | REST (RestAssured) + SOAP |
-| **DB** | 🔜 Planned | JDBC — file-based `.sql` + inline SQL |
-
-- **Declarative CSV tests** — write tests like a spreadsheet
-- **Data-driven** — JSON test data blocks, no hardcoded values
-- **Cross-channel variables** — share data between UI, API, and DB steps
-- **Reusable sub-flows** — `INCLUDE` to compose test scenarios
-- **Safe cleanup** — `FINALLY` block always runs even on failure
-- **Environment switching** — one config change to run on dev/staging/prod
+| **Core** | ✅ Ready | `CHANGE_DATA_STORE`, `COMPARE` (11 operators), `LOG`, `INCLUDE`, `FINALLY` |
+| **UI** | ✅ Ready | 23 Selenium actions — click, input, select, wait, assert, frames, windows, drag-drop, JS |
+| **API** | ✅ Ready | `SEND_REQUEST`, `ASSERT_STATUS`, `ASSERT_RESPONSE`, `STORE_DATA:RESPONSE` |
+| **DB** | ✅ Ready | `DB_QUERY`, `DB_EXECUTE`, `ASSERT_ROW_COUNT`, `ASSERT_COLUMN`, `STORE_DATA:DB` |
 
 ---
 
-## Quick Start
-
-### 1. Prerequisites
+## Prerequisites
 
 | Tool | Version |
 |---|---|
 | Java | 17+ |
 | Maven | 3.8+ |
-| Chrome / Firefox | Latest |
+| Chrome / Firefox / Edge | Latest |
 
-### 2. Clone and build
+---
+
+## Quick Start
+
+### 1. Clone and build
 
 ```bash
 git clone <repo-url>
@@ -56,72 +59,131 @@ cd H-A-G
 mvn clean compile
 ```
 
-### 3. Create config files in the project root
+### 2. Configure (three files in the project root)
 
-**`url.config.yml`**
+**`url.config.yml`** — environment URLs
 ```yaml
 active-environment: dev
 environments:
   dev:
-    application: https://dev.myapp.com
-    api-base:    https://api-dev.myapp.com
+    application: https://dev.yourapp.com
+    api-base:    https://api-dev.yourapp.com
+  staging:
+    application: https://staging.yourapp.com
+    api-base:    https://api-staging.yourapp.com
 ```
 
-**`runner.config.yml`**
+**`runner.config.yml`** — browser and execution settings
 ```yaml
-test-suite:
-  - tests/
 browser:
   type: chrome
   headless: false
+execution:
+  timeout-seconds: 30
+  retry-attempts: 1
+screenshots:
+  directory: target/screenshots
 ```
 
-**`testdata.config.yml`**
+**`testdata.config.yml`** — file paths and optional database
 ```yaml
 paths:
-  locators:   src/main/resources/locators/
-  test-data:  src/main/resources/testdata/
+  locators:  src/main/resources/locators
+  test-data: src/main/resources/testdata
+  templates: src/main/resources/templates
+  scripts:   src/main/resources/scripts
+database:
+  url:      ""   # jdbc:mysql://localhost:3306/testdb
+  username: ""
+  password: ""   # supports ${env.DB_PASSWORD}
 ```
 
-### 4. Create a locator file
+### 3. Create a locator file
 
 `src/main/resources/locators/LoginPage.json`
 ```json
 {
-  "username-field": { "type": "id",  "value": "username" },
-  "password-field": { "type": "css", "value": "input[type='password']" },
-  "login-button":   { "type": "id",  "value": "loginBtn" }
+  "usernameField": { "type": "id",   "value": "username" },
+  "passwordField": { "type": "css",  "value": "input[type='password']" },
+  "loginButton":   { "type": "id",   "value": "loginBtn" },
+  "errorMessage":  { "type": "xpath","value": "//div[@class='error-msg']" }
 }
 ```
 
-### 5. Create a test data file
+### 4. Create a test data file
 
-`src/main/resources/testdata/login/users.json`
+`src/main/resources/testdata/users.json`
 ```json
 {
-  "validUser": {
-    "username": "john@example.com",
-    "password": "Secret@123"
-  }
+  "validUser":   { "username": "john@example.com", "password": "Secret@123" },
+  "lockedUser":  { "username": "locked@example.com", "password": "Secret@123" },
+  "adminUser":   { "username": "admin@example.com",  "password": "Admin@999"  }
+}
+```
+
+### 5. Create an API request template
+
+`src/main/resources/templates/auth/login.json`
+```json
+{
+  "_method":   "POST",
+  "_endpoint": "/api/v1/auth/login",
+  "_headers":  { "Content-Type": "application/json" },
+  "username":  "${username}",
+  "password":  "${password}"
 }
 ```
 
 ### 6. Write your first test
 
-`tests/login/login_test.csv`
+`tests/login/valid_login.csv`
 ```csv
 Action,Recipient,Source,Key
 NAVIGATE,,,${URL:application}/login
-INPUT,LoginPage.username-field,testdata/login/users.json,validUser
-INPUT,LoginPage.password-field,testdata/login/users.json,validUser
-CLICK,LoginPage.login-button,,
-ASSERT_VISIBLE,HomePage.dashboard,,
+INPUT,LoginPage.usernameField,testdata/users.json,validUser
+INPUT,LoginPage.passwordField,testdata/users.json,validUser
+CLICK,LoginPage.loginButton,,
+ASSERT_VISIBLE,HomePage.welcomeBanner,,
+ASSERT_TEXT:CONTAINS,HomePage.welcomeBanner,,Welcome
+
+FINALLY
+NAVIGATE,,,${URL:application}/logout
 ```
 
-### 7. Run it
+### 7. Create your test class
+
+```java
+public class LoginTest extends HagTestBase {
+
+    @BeforeMethod
+    public void before() { setUpTest(); }
+
+    @Test
+    public void validLoginShouldShowDashboard() {
+        runTest("Valid Login", "tests/login/valid_login.csv");
+    }
+
+    @Test
+    public void lockedUserShouldSeeError() {
+        runTest("Locked User Login", "tests/login/locked_login.csv");
+    }
+}
+```
+
+### 8. Run
 
 ```bash
-mvn test -pl hag-runner
+# Default (Chrome, non-headless)
+mvn test -pl hag-runner -am
+
+# Firefox, headless (CI)
+mvn test -pl hag-runner -am -Dbrowser=firefox -Dheadless=true
+
+# Parallel — 4 threads
+mvn test -pl hag-runner -am -Dthread.count=4
+
+# Different environment
+mvn test -pl hag-runner -am -Denv=staging
 ```
 
 ---
@@ -130,22 +192,22 @@ mvn test -pl hag-runner
 
 ```
 H-A-G/
-├── hag-core/        Core framework — dispatcher, parser, DataStore, config
-├── hag-ui/          Selenium UI adapter — 18 actions
-├── hag-api/         REST/SOAP adapter (planned)
-├── hag-db/          JDBC DB adapter (planned)
-├── hag-runner/      TestNG runner + suite wiring
+├── hag-core/               Core framework — parser, dispatcher, DataStore, config
+├── hag-ui/                 Selenium UI adapter — 23 actions
+├── hag-api/                REST adapter — RestAssured 5.4
+├── hag-db/                 JDBC DB adapter — MySQL + MSSQL
+├── hag-runner/             TestNG runner, FrameworkBootstrap, HagTestBase
 │
-├── url.config.yml       ← Environment URLs (create this)
-├── runner.config.yml    ← Browser, threads, test paths (create this)
-├── testdata.config.yml  ← File locations, DB config (create this)
+├── url.config.yml          ← Environment URLs (dev / staging / prod)
+├── runner.config.yml       ← Browser, timeout, retry, screenshot dir
+├── testdata.config.yml     ← File path roots, DB connection
 │
-├── tests/               ← Your CSV test files
-├── src/main/resources/
-│   ├── locators/        ← Page JSON locator files
-│   ├── testdata/        ← JSON test data blocks
-│   ├── templates/       ← API request templates (JSON/XML)
-│   └── scripts/         ← SQL query files
+├── tests/                  ← Your CSV test files go here
+└── src/main/resources/
+    ├── locators/           ← Element locator JSON files (one per page)
+    ├── testdata/           ← Test data JSON files (named blocks)
+    ├── templates/          ← API request template JSON files
+    └── scripts/            ← SQL query files (.sql)
 ```
 
 ---
@@ -153,87 +215,128 @@ H-A-G/
 ## Action Syntax
 
 ```
-ACTION           → default behaviour
-ACTION:SUBCASE   → specific variant
+Action           → default behaviour
+Action:SUBCASE   → specific variant (e.g. CLICK:DOUBLE, ASSERT_TEXT:CONTAINS)
 ```
 
-Modifier flags go in the **Source column** (pipe-separated — never a comma):
+Source column carries **modifiers** (pipe-separated, never commas):
 
 ```csv
-STORE_DATA,ProfilePage.name,trim|upper,savedName
 WAIT:TEXT,StatusPage.label,timeout=60,Ready
 ASSERT_TEXT:CONTAINS,ErrorPage.msg,ignore-case,required field
+STORE_DATA,ProfilePage.name,trim|upper,savedName
 ```
 
 ---
 
-## Key Actions Reference
+## Full Action Reference
 
-| Action | Description |
-|---|---|
-| `NAVIGATE` | Open a URL |
-| `CLICK` / `CLICK:DOUBLE` / `CLICK:RIGHT` | Mouse interactions |
-| `INPUT` | Type text (literal or from test data file) |
-| `SELECT` / `SELECT:TEXT` / `SELECT:INDEX` | Dropdown |
-| `WAIT:VISIBLE` / `WAIT:INVISIBLE` / `WAIT:TEXT` | Explicit waits |
-| `ASSERT_TEXT` / `ASSERT_TEXT:CONTAINS` | Text assertions |
-| `ASSERT_VISIBLE` / `ASSERT_HIDDEN` | Visibility checks |
-| `ASSERT_ENABLED` / `ASSERT_DISABLED` | Element state |
-| `ASSERT_COUNT` / `ASSERT_ATTRIBUTE` | DOM assertions |
-| `STORE_DATA` | Read element text → variable |
-| `CHANGE_DATA_STORE` | Set/update a variable |
-| `COMPARE:EQUALS` / `COMPARE:GT` / `COMPARE:CONTAINS` | Value comparisons |
-| `INCLUDE` | Inline another CSV as a sub-flow |
-| `FINALLY` | Steps here always run (cleanup) |
-| `SEND_REQUEST` | HTTP REST call (method in template) |
-| `SEND_SOAP` | SOAP call |
-| `ASSERT_STATUS` / `ASSERT_RESPONSE` | API assertions |
-| `DB_QUERY` / `DB_QUERY:INLINE` | SQL SELECT |
-| `DB_EXECUTE` / `DB_EXECUTE:INLINE` | SQL DML |
-| `ASSERT_ROW_COUNT` / `ASSERT_COLUMN` | DB assertions |
+### UI Actions
 
-For the full reference with all sub-cases and examples, see [HAG_User_Guide.md](docs/HAG_User_Guide.md).
+| Action | Sub-cases | Description |
+|---|---|---|
+| `NAVIGATE` | `:BACK` `:FORWARD` `:REFRESH` | Browser navigation |
+| `CLICK` | `:DOUBLE` `:RIGHT` `:JS` `:HOLD` | Mouse interactions |
+| `INPUT` | `:KEY` `:FILE` | Type text / keyboard / file upload |
+| `SELECT` | `:TEXT` `:INDEX` `:VALUE` | Dropdown selection |
+| `HOVER` | | Move mouse to element |
+| `SCROLL` | `:TOP` `:BOTTOM` `:INTO_VIEW` | Page/element scroll |
+| `CLEAR` | | Clear input field |
+| `DRAG_DROP` | | Drag source → target |
+| `JS_CLICK` | | Click via JavaScript |
+| `JS_EXECUTE` | | Run arbitrary JS |
+| `GET_TEXT` | | Read element text → Key variable |
+| `WAIT` | `:VISIBLE` `:INVISIBLE` `:TEXT` `:CLICKABLE` | Explicit waits |
+| `ASSERT_TEXT` | `:CONTAINS` `:STARTS_WITH` `:ENDS_WITH` | Text assertions |
+| `ASSERT_VISIBLE` | | Element is displayed |
+| `ASSERT_HIDDEN` | | Element is not displayed |
+| `ASSERT_ENABLED` / `ASSERT_DISABLED` | | Element state |
+| `ASSERT_SELECTED` | | Checkbox/radio state |
+| `ASSERT_ATTRIBUTE` | | DOM attribute match |
+| `ASSERT_COUNT` | | Element count on page |
+| `SWITCH_FRAME` | `:DEFAULT` | Switch iframe context |
+| `SWITCH_WINDOW` | | Switch browser window/tab |
+
+### API Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `SEND_REQUEST` | | Execute REST call from JSON template |
+| `ASSERT_STATUS` | `:NOT` `:2XX` `:4XX` `:5XX` | HTTP status code assertion |
+| `ASSERT_RESPONSE` | `:CONTAINS` `:NOT_EQUALS` `:NOT_NULL` `:NULL` `:HEADER` | Response body/header assertion |
+| `STORE_DATA` | `:RESPONSE` `:HEADER` `:STATUS` | Extract response value → variable |
+
+### DB Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `DB_QUERY` | `:INLINE` | Execute SQL SELECT |
+| `DB_EXECUTE` | `:INLINE` | Execute SQL INSERT/UPDATE/DELETE |
+| `ASSERT_ROW_COUNT` | `:AT_LEAST` `:AT_MOST` `:ZERO` `:NOT_ZERO` | Row count assertion |
+| `ASSERT_COLUMN` | `:CONTAINS` `:NOT_EQUALS` `:NOT_NULL` `:NULL` | Cell value assertion |
+| `STORE_DATA` | `:DB` `:DB_COUNT` | Extract DB value → variable |
+
+### Core Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `CHANGE_DATA_STORE` | `:DELETE` | Set or delete a variable |
+| `COMPARE` | `:EQUALS` `:NOT_EQUALS` `:CONTAINS` `:NOT_CONTAINS` `:STARTS_WITH` `:ENDS_WITH` `:GT` `:LT` `:GTE` `:LTE` `:REGEX` | Assert two values |
+| `LOG` | | Write a message to the logs |
+| `INCLUDE` | | Inline another CSV file |
+| `FINALLY` | | Marker — steps below always run |
 
 ---
 
 ## Variable System
 
+Variables are scoped per layer and resolved with `${SCOPE:varName}`:
+
 ```csv
-STORE_DATA,OrderPage.orderId,,capturedId          # stores in UI scope
-COMPARE:EQUALS,${UI:capturedId},,ORD-12345         # reads from UI scope
-SEND_REQUEST,templates/order.json,,
-STORE_DATA:RESPONSE,data.id,,orderId               # stores in API scope
-DB_QUERY:INLINE,,,SELECT * FROM orders WHERE id='${API:orderId}'
+# Store from UI
+GET_TEXT,OrderPage.orderId,,capturedId
+# Use in API template
+SEND_REQUEST,templates/orders/get.json,,
+# Store from API response
+STORE_DATA:RESPONSE,data.status,,orderStatus
+# Assert in DB
+DB_QUERY:INLINE,,,SELECT * FROM orders WHERE id='${UI:capturedId}'
+ASSERT_COLUMN,status,,${API:orderStatus}
 ```
 
 | Syntax | Scope |
 |---|---|
-| `${varName}` | GLOBAL |
+| `${varName}` | GLOBAL (default) |
 | `${GLOBAL:varName}` | GLOBAL (explicit) |
-| `${UI:varName}` | Browser layer |
-| `${API:varName}` | API layer |
-| `${DB:varName}` | Database layer |
-| `${URL:application}` | From `url.config.yml` |
+| `${UI:varName}` | Browser layer only |
+| `${API:varName}` | API layer only |
+| `${DB:varName}` | Database layer only |
+| `${URL:application}` | From `url.config.yml` active environment |
 
 ---
 
 ## Architecture
 
 ```
-hag-runner
+HagTestBase (TestNG)
     └─ FrameworkBootstrap
-           ├─ CoreBootstrap      (CHANGE_DATA_STORE, COMPARE, LOG …)
-           ├─ UiBootstrap        (CLICK, INPUT, WAIT … 18 actions)
-           ├─ ApiBootstrap       (SEND_REQUEST, ASSERT_RESPONSE …)
-           └─ DbBootstrap        (DB_QUERY, ASSERT_ROW_COUNT …)
+           ├─ CoreBootstrap      — CHANGE_DATA_STORE, COMPARE, LOG
+           ├─ UiBootstrap        — 23 Selenium actions
+           ├─ ApiBootstrap       — SEND_REQUEST, ASSERT_STATUS, ASSERT_RESPONSE
+           └─ DbBootstrap        — DB_QUERY, DB_EXECUTE, ASSERT_ROW_COUNT, ASSERT_COLUMN
 
-CSV parser (OpenCSV)
-    └─ CsvTestParser → Step[]
+CsvTestParser (OpenCSV)
+    └─ Step[]
            └─ DefaultActionDispatcher
-                  ├─ ActionDescriptorParser.parse()         → ACTION:SUBCASE
-                  ├─ ActionDescriptorParser.parseModifiers() → Source modifiers
+                  ├─ ActionDescriptorParser  → ACTION:SUBCASE + Source modifiers
+                  ├─ StepResolver            → ${VAR} substitution
                   └─ ActionRegistry.resolve(name)
                          └─ Action.execute(step, descriptor, context)
+                                └─ ExecutionContext
+                                       ├─ DataStore (scoped variables)
+                                       ├─ UiAdapter  (Selenium WebDriver)
+                                       ├─ ApiAdapter (RestAssured)
+                                       └─ DbAdapter  (JDBC Connection)
 ```
 
 ---
@@ -242,8 +345,8 @@ CSV parser (OpenCSV)
 
 | Document | Description |
 |---|---|
-| [HAG User Guide](docs/HAG_User_Guide.md) | Step-by-step guide to writing and running H-A-G tests |
-| [BRD & Gap Analysis](docs/HAG_BRD_and_Gap_Analysis.md) | Business requirements, action taxonomy, implementation roadmap |
+| [HAG User Guide](docs/HAG_User_Guide.md) | Complete step-by-step guide for writing and running tests |
+| [BRD & Gap Analysis](docs/HAG_BRD_and_Gap_Analysis.md) | Business requirements, design decisions, action taxonomy |
 
 ---
 

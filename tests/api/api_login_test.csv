@@ -1,0 +1,16 @@
+Action,Recipient,Source,Key
+
+# ── API LOGIN — TOKEN VALIDATION ──────────────────────────────────────────────
+# Send a login REST request and validate the response structure.
+# Store the returned token for downstream steps.
+
+SEND_REQUEST,templates/auth/login.json,testdata/users.json,validUser
+ASSERT_STATUS,,,200
+ASSERT_RESPONSE:NOT_NULL,data.token,,
+ASSERT_RESPONSE:NOT_NULL,data.expiresIn,,
+STORE_DATA:RESPONSE,data.token,,authToken
+STORE_DATA:STATUS,,,lastStatus
+LOG,,,API login successful — token captured
+
+FINALLY
+SEND_REQUEST,templates/auth/logout.json,,

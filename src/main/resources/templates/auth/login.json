@@ -1,0 +1,10 @@
+{
+  "_method":   "POST",
+  "_endpoint": "/api/v1/auth/login",
+  "_headers": {
+    "Content-Type": "application/json",
+    "Accept":       "application/json"
+  },
+  "username": "${username}",
+  "password": "${password}"
+}
