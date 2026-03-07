@@ -2,17 +2,10 @@ package com.hag.core.executor;
 
 import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
-/**
- * SET Action
- *
- * Stores a resolved value into the GLOBAL scope of DataStore.
- *
- * CSV:
- * SET,variableName,,value
- */
 public final class SetContextAction implements Action {
 
     @Override
@@ -28,6 +21,7 @@ public final class SetContextAction implements Action {
     @Override
     public ExecutionResult execute(
             Step step,
+            ActionDescriptor descriptor,
             ExecutionContext context
     ) {
 
@@ -35,7 +29,7 @@ public final class SetContextAction implements Action {
 
         if (variableName == null || variableName.isBlank()) {
             return ExecutionResult.failure(
-                    "SET action requires recipient (variable name)"
+                    "SET requires recipient as variable name"
             );
         }
 

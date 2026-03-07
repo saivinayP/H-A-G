@@ -1,11 +1,10 @@
 package com.hag.core.adapter;
 
+/**
+ * Marker interface representing a UI capability provider.
+ *
+ * Core does not define UI behavior.
+ * Concrete implementations live in UI module.
+ */
 public interface UiAdapter {
-
-    void click(String locator, String elementName);
-    void doubleClick(String locator, String elementName);
-    void rightClick(String locator, String elementName);
-    void type(String locator, String elementName, String value);
-    void hover(String locator, String elementName);
-    boolean isDisplayed(String locatorFile, String elementName);
 }

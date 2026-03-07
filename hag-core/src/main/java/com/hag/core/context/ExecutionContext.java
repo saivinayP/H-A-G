@@ -3,27 +3,57 @@ package com.hag.core.context;
 import com.hag.core.adapter.ApiAdapter;
 import com.hag.core.adapter.DbAdapter;
 import com.hag.core.adapter.UiAdapter;
+import com.hag.core.config.FrameworkConfig;
 import com.hag.core.resolver.TestDataResolver;
 import com.hag.core.result.ExecutionResult;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * ExecutionContext
+ *
+ * Holds runtime state for a single test execution.
+ *
+ * Responsibilities:
+ *  - Scoped data storage
+ *  - Placeholder resolution
+ *  - Adapter access
+ *  - Step indexing
+ *  - Last result tracking
+ *
+ * Does NOT:
+ *  - Execute business logic
+ *  - Resolve test data files directly
+ */
 public class ExecutionContext {
 
-    private int currentStepIndex = 0;
-    private final DataStore dataStore = new DataStore();
+    private final AtomicInteger currentStepIndex =
+            new AtomicInteger(0);
 
-    // existing fields:
-    // - DataStore
-    // - lastResult
-    // - step index, etc.
+    private final DataStore dataStore =
+            new DataStore();
+
+    private ExecutionResult lastResult;
+
+    private UiAdapter uiAdapter;
+    private ApiAdapter apiAdapter;
+    private DbAdapter dbAdapter;
+    private TestDataResolver testDataResolver;
+    private FrameworkConfig config;
+
+    /* ==========================================================
+       Placeholder Resolution
+       ========================================================== */
 
     /**
-     * Resolves a value used in CSV.
-     * Supports:
-     * - ${VAR}
-     * - ${SCOPE:VAR}
-     * - literal values
+     * Resolves placeholder expressions:
+     *
+     *  ${VAR}
+     *  ${SCOPE:VAR}
+     *
+     * If no placeholder syntax is found,
+     * returns literal value.
      */
     public Object resolveValue(String input) {
 
@@ -33,8 +63,8 @@ public class ExecutionContext {
 
         String trimmed = input.trim();
 
-        // Placeholder resolution
-        if (trimmed.startsWith("${") && trimmed.endsWith("}")) {
+        if (trimmed.startsWith("${")
+                && trimmed.endsWith("}")) {
 
             String token =
                     trimmed.substring(2, trimmed.length() - 1);
@@ -43,43 +73,60 @@ public class ExecutionContext {
             String key = token;
 
             if (token.contains(":")) {
-                String[] parts = token.split(":", 2);
-                scope = DataScope.valueOf(parts[0].toUpperCase());
+                String[] parts =
+                        token.split(":", 2);
+
+                scope =
+                        DataScope.valueOf(
+                                parts[0].toUpperCase()
+                        );
+
                 key = parts[1];
             }
 
             Optional<Object> value =
-                    getDataStore().get(scope, key);
+                    dataStore.get(scope, key);
 
             return value.orElseThrow(() ->
                     new IllegalStateException(
-                            "No value found for placeholder: " + trimmed
+                            "No value found for placeholder: "
+                                    + trimmed
                     )
             );
         }
 
-        // Literal value
         return trimmed;
     }
 
+    /* ==========================================================
+       Step Index Handling
+       ========================================================== */
+
     public int nextStepIndex() {
-        return ++currentStepIndex;
+        return currentStepIndex.incrementAndGet();
     }
 
     public int getCurrentStepIndex() {
-        return currentStepIndex;
+        return currentStepIndex.get();
     }
+
+    /* ==========================================================
+       Data Store
+       ========================================================== */
 
     public DataStore getDataStore() {
         return dataStore;
     }
 
     public void reset() {
-        currentStepIndex = 0;
+        currentStepIndex.set(0);
         dataStore.clear();
+        lastResult = null;
     }
 
-    private ExecutionResult lastResult;
+    /* ==========================================================
+       Last Execution Result
+       ========================================================== */
 
     public void setLastResult(ExecutionResult lastResult) {
         this.lastResult = lastResult;
@@ -89,7 +136,9 @@ public class ExecutionContext {
         return lastResult;
     }
 
-    private UiAdapter uiAdapter;
+    /* ==========================================================
+       Adapter Accessors
+       ========================================================== */
 
     public UiAdapter getUiAdapter() {
         return uiAdapter;
@@ -99,18 +148,6 @@ public class ExecutionContext {
         this.uiAdapter = uiAdapter;
     }
 
-    private TestDataResolver testDataResolver;
-
-    public TestDataResolver getTestDataResolver() {
-        return testDataResolver;
-    }
-
-    public void setTestDataResolver(TestDataResolver testDataResolver) {
-        this.testDataResolver = testDataResolver;
-    }
-
-    private ApiAdapter apiAdapter;
-
     public ApiAdapter getApiAdapter() {
         return apiAdapter;
     }
@@ -118,8 +155,6 @@ public class ExecutionContext {
     public void setApiAdapter(ApiAdapter apiAdapter) {
         this.apiAdapter = apiAdapter;
     }
-
-    private DbAdapter dbAdapter;
 
     public DbAdapter getDbAdapter() {
         return dbAdapter;
@@ -129,29 +164,59 @@ public class ExecutionContext {
         this.dbAdapter = dbAdapter;
     }
 
+    public TestDataResolver getTestDataResolver() {
+        return testDataResolver;
+    }
+
+    public void setTestDataResolver(
+            TestDataResolver testDataResolver
+    ) {
+        this.testDataResolver = testDataResolver;
+    }
+
+    public FrameworkConfig getConfig() {
+        return config;
+    }
+
+    public void setConfig(FrameworkConfig config) {
+        this.config = config;
+    }
+
+    /* ==========================================================
+       Runtime Validation
+       ========================================================== */
+
     /**
-     * Validates that all required runtime components
-     * are configured before execution begins.
+     * Validates that the mandatory framework components are configured.
      *
-     * This method must be called once at the start
-     * of execution by the engine.
+     * <p><b>Adapter presence is NOT checked here.</b>
+     * UI/API/DB adapters are optional and validated lazily inside each
+     * action that requires them. This allows UI-only tests to run without
+     * configuring an {@code ApiAdapter} or {@code DbAdapter}.
+     *
+     * <p>Called once by the execution engine before the test begins.
      */
     public void validateConfiguration() {
 
-        if (uiAdapter == null) {
-            throw new IllegalStateException("UiAdapter is not configured in ExecutionContext");
-        }
-
-        if (apiAdapter == null) {
-            throw new IllegalStateException("ApiAdapter is not configured in ExecutionContext");
-        }
-
-        if (dbAdapter == null) {
-            throw new IllegalStateException("DbAdapter is not configured in ExecutionContext");
-        }
-
         if (testDataResolver == null) {
-            throw new IllegalStateException("TestDataResolver is not configured in ExecutionContext");
+            throw new IllegalStateException(
+                    "TestDataResolver is not configured in ExecutionContext"
+            );
+        }
+
+        if (config == null) {
+            throw new IllegalStateException(
+                    "FrameworkConfig is not configured in ExecutionContext"
+            );
         }
     }
-}
+
+    /** @return {@code true} when a UiAdapter has been registered. */
+    public boolean hasUiAdapter()  { return uiAdapter  != null; }
+
+    /** @return {@code true} when an ApiAdapter has been registered. */
+    public boolean hasApiAdapter() { return apiAdapter != null; }
+
+    /** @return {@code true} when a DbAdapter has been registered. */
+    public boolean hasDbAdapter()  { return dbAdapter  != null; }
+}
