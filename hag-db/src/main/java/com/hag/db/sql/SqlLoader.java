@@ -73,7 +73,13 @@ public final class SqlLoader {
         while (m.find()) {
             String token = m.group(1);
             Object value = resolveToken(token, vars);
-            m.appendReplacement(sb, value == null ? "" : Matcher.quoteReplacement(value.toString()));
+            if (value == null) {
+                throw new IllegalStateException(
+                    "Unresolved variable in SQL: ${" + token + "}. Available keys: "
+                    + (vars == null ? "none" : vars.keySet())
+                );
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(value.toString()));
         }
         m.appendTail(sb);
         return sb.toString();

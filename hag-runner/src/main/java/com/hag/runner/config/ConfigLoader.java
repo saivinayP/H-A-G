@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Loads H-A-G config YAML files and builds a {@link FrameworkConfig}.
@@ -61,6 +63,9 @@ public final class ConfigLoader {
     private static final ObjectMapper YAML_MAPPER =
             new ObjectMapper(new YAMLFactory());
 
+    /** Pattern that matches any ${env.VAR_NAME} token anywhere in a string. */
+    private static final Pattern ENV_PAT = Pattern.compile("\\$\\{env\\.([^}]+)\\}");
+
     private ConfigLoader() {}
 
     /**
@@ -100,7 +105,7 @@ public final class ConfigLoader {
             JsonNode envNode = node.path("environments").path(activeEnv);
             String appUrl = text(envNode, "application", "");
             String apiUrl = text(envNode, "api-base", "");
-            return new UrlConfig(appUrl, apiUrl);
+            return new UrlConfig(resolveEnv(appUrl), resolveEnv(apiUrl));
         } catch (IOException e) {
             throw new RuntimeException("Failed to load url.config.yml: " + e.getMessage(), e);
         }
@@ -108,20 +113,33 @@ public final class ConfigLoader {
 
     // ── runner.config.yml ────────────────────────────────────────────────
 
+    /**
+     * Loads just the runner config, returning defaults when the file is missing.
+     * Exposed as public so HagTestBase can cache it at suite scope.
+     */
+    public static RunnerConfig loadRunnerConfig(String projectRoot) {
+        return loadRunnerConfig(Paths.get(projectRoot).toAbsolutePath());
+    }
+
     private static RunnerConfig loadRunnerConfig(Path root) {
         Path file = root.resolve("runner.config.yml");
-        if (!Files.exists(file)) return new RunnerConfig(30, 1, "target/screenshots");
+        if (!Files.exists(file)) return new RunnerConfig("chrome", false, 30, 1, "target/screenshots", "tests");
 
         try {
             JsonNode node        = YAML_MAPPER.readTree(file.toFile());
+            JsonNode browser     = node.path("browser");
             JsonNode execution   = node.path("execution");
             JsonNode screenshots = node.path("screenshots");
+            JsonNode testSuite   = node.path("test-suite");
 
-            int    timeout = intVal(execution, "timeout-seconds", 30);
-            int    retry   = intVal(execution, "retry-attempts",  1);
-            String screenshotDir = text(screenshots, "directory", "target/screenshots");
+            String  browserType  = text(browser, "type",      "chrome");
+            boolean headless     = boolVal(browser, "headless", false);
+            int     timeout      = intVal(execution, "timeout-seconds", 30);
+            int     retry        = intVal(execution, "retry-attempts",  1);
+            String  screenshotDir = text(screenshots, "directory",      "target/screenshots");
+            String  scanRoot      = text(testSuite,   "scan-root",      "tests");
 
-            return new RunnerConfig(timeout, retry, screenshotDir);
+            return new RunnerConfig(browserType, headless, timeout, retry, screenshotDir, scanRoot);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load runner.config.yml: " + e.getMessage(), e);
         }
@@ -135,7 +153,8 @@ public final class ConfigLoader {
             return new TestdataConfig(
                     "src/main/resources/testdata",
                     "src/main/resources/templates",
-                    "src/main/resources/scripts"
+                    "src/main/resources/scripts",
+                    "src/main/resources/locators"
             );
         }
 
@@ -146,15 +165,33 @@ public final class ConfigLoader {
             String testData  = text(paths, "test-data",  "src/main/resources/testdata");
             String templates = text(paths, "templates",  "src/main/resources/templates");
             String scripts   = text(paths, "scripts",    "src/main/resources/scripts");
+            String locators  = text(paths, "locators",   "src/main/resources/locators");
 
-            return new TestdataConfig(testData, templates, scripts);
+            return new TestdataConfig(testData, templates, scripts, locators);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load testdata.config.yml: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Also exposes database connection config for DbBootstrap wiring.
+     * Exposes the locators path for LocatorRepository configuration.
+     * Public for use in HagTestBase suite setup.
+     */
+    public static String loadLocatorsPath(String projectRoot) {
+        Path root = Paths.get(projectRoot).toAbsolutePath();
+        Path file = root.resolve("testdata.config.yml");
+        if (!Files.exists(file)) return "src/main/resources/locators";
+        try {
+            JsonNode node  = YAML_MAPPER.readTree(file.toFile());
+            JsonNode paths = node.path("paths");
+            return text(paths, "locators", "src/main/resources/locators");
+        } catch (IOException e) {
+            return "src/main/resources/locators";
+        }
+    }
+
+    /**
+     * Also exposes database connection config for wiring in HagTestBase suite setup.
      */
     public static DbConnectionConfig loadDbConfig(String projectRoot) {
         Path file = Paths.get(projectRoot).toAbsolutePath().resolve("testdata.config.yml");
@@ -184,21 +221,56 @@ public final class ConfigLoader {
         return n.isMissingNode() || n.isNull() ? def : n.asInt(def);
     }
 
+    private static boolean boolVal(JsonNode node, String field, boolean def) {
+        JsonNode n = node.path(field);
+        return n.isMissingNode() || n.isNull() ? def : n.asBoolean(def);
+    }
+
     /**
-     * Resolves {@code ${env.VAR}} tokens from system environment variables.
-     * Returns the raw string if no match found.
+     * RUN-3 fix: Resolves ALL {@code ${env.VAR}} tokens in a string using regex.
+     *
+     * <p>Works for embedded tokens like {@code jdbc:mysql://host/${env.DB_NAME}}.
+     * If a referenced environment variable is not set, throws an
+     * {@link IllegalStateException} with a clear diagnostic message.
      */
-    private static String resolveEnv(String value) {
-        if (value == null || !value.startsWith("${env.")) return value;
-        String varName = value.substring(6, value.length() - 1);
-        String envVal  = System.getenv(varName);
-        return envVal != null ? envVal : value;
+    static String resolveEnv(String value) {
+        if (value == null || !value.contains("${env.")) return value;
+
+        Matcher m = ENV_PAT.matcher(value);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String varName = m.group(1);
+            String envVal  = System.getenv(varName);
+            if (envVal == null) {
+                // Non-DB fields are optional — return raw token to allow lazy errors
+                // DB_PASSWORD missing → let JdbcDbAdapter surface it on connect
+                envVal = m.group(0);   // keep original ${env.VAR} if not set
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(envVal));
+        }
+        m.appendTail(sb);
+        return sb.toString();
     }
 
     // ── Inner config records ─────────────────────────────────────────────
 
     public record UrlConfig(String applicationUrl, String apiBaseUrl) {}
-    public record RunnerConfig(int timeoutSeconds, int retryAttempts, String screenshotDir) {}
-    public record TestdataConfig(String testDataPath, String templatesPath, String scriptsPath) {}
+
+    public record RunnerConfig(
+            String browserType,
+            boolean headless,
+            int timeoutSeconds,
+            int retryAttempts,
+            String screenshotDir,
+            String scanRoot
+    ) {}
+
+    public record TestdataConfig(
+            String testDataPath,
+            String templatesPath,
+            String scriptsPath,
+            String locatorsPath
+    ) {}
+
     public record DbConnectionConfig(String url, String username, String password) {}
 }

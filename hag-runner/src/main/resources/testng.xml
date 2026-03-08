@@ -1,63 +1,74 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 
 <!--
-  HAG Master Test Suite
+    H-A-G Master Test Suite
+    ========================
+    Four test configurations in one XML:
 
-  Key parameters:
-    - thread-count:    number of parallel browser threads (matches your Grid capacity)
-    - data-provider-thread-count: DataProvider parallelism
-    - browser:         chrome | firefox | edge
-    - headless:        true | false
-    - env:             override active-environment from url.config.yml
+    1. Smoke    — fast sanity checks (tests/login, tests/smoke)
+    2. API      — API-only scenarios (tests/api)
+    3. Regression — hand-authored regression tests
+    4. BulkAll  — auto-discovers every CSV under tests/ via BulkTestRunner
 
-  Running:
-    mvn test -pl hag-runner -am
-    mvn test -pl hag-runner -am -Dbrowser=firefox -Dheadless=true
-    mvn test -pl hag-runner -am -Dthread.count=4
+    Usage:
+      mvn test                                # runs All suite (BulkAll)
+      mvn test -Dgroups=smoke                 # Smoke group only
+      mvn test -Dgroups=api                   # API group only
+      mvn test -Dhag.test.root=tests/login    # custom scan root
 -->
-<suite name="HAG Test Suite"
-       verbose="1"
-       parallel="methods"
-       thread-count="1"
-       data-provider-thread-count="4">
+<suite name="H-A-G Suite" verbose="1" parallel="methods" thread-count="2">
 
-    <!-- ══════════════════════════════════════════════════════════
-         Suite-level parameters — override via -D system properties
-         ══════════════════════════════════════════════════════════ -->
-    <parameter name="browser"   value="${browser:chrome}"/>
-    <parameter name="headless"  value="${headless:false}"/>
-
-    <!-- ══════════════════════════════════════════════════════════
-         Smoke Tests
-         ══════════════════════════════════════════════════════════ -->
-    <test name="Smoke Tests" preserve-order="true">
-        <packages>
-            <package name="com.hag.tests.smoke"/>
-        </packages>
+    <!-- ─────────────────── Smoke Suite ─────────────────────────────── -->
+    <test name="Smoke">
+        <groups>
+            <run>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.hag.runner.suite.BulkTestRunner"/>
+        </classes>
     </test>
 
-    <!-- ══════════════════════════════════════════════════════════
-         Regression Tests
-         ══════════════════════════════════════════════════════════ -->
-    <test name="Regression Tests">
-        <packages>
-            <package name="com.hag.tests.regression"/>
-        </packages>
+    <!-- ─────────────────── API Suite ───────────────────────────────── -->
+    <test name="API">
+        <groups>
+            <run>
+                <include name="api"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.hag.runner.suite.BulkTestRunner"/>
+        </classes>
     </test>
 
-    <!-- ══════════════════════════════════════════════════════════
-         API Tests (no browser needed)
-         ══════════════════════════════════════════════════════════ -->
-    <test name="API Tests">
-        <packages>
-            <package name="com.hag.tests.api"/>
-        </packages>
+    <!-- ─────────────────── Regression Suite ────────────────────────── -->
+    <test name="Regression">
+        <groups>
+            <run>
+                <include name="regression"/>
+                <include name="e2e"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.hag.runner.suite.BulkTestRunner"/>
+            <class name="com.hag.tests.regression.LoginRegressionTest"/>
+        </classes>
     </test>
 
-    <!-- ══════════════════════════════════════════════════════════
-         Listeners
-         ══════════════════════════════════════════════════════════ -->
+    <!-- ─────────────────── Full Bulk Suite (default) ────────────────── -->
+    <test name="BulkAll">
+        <groups>
+            <run>
+                <include name="all"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.hag.runner.suite.BulkTestRunner"/>
+        </classes>
+    </test>
+
+    <!-- ─────────────────── Listeners ───────────────────────────────── -->
     <listeners>
         <listener class-name="com.hag.runner.listener.HagSuiteListener"/>
     </listeners>

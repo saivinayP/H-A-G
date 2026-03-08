@@ -13,6 +13,7 @@ import com.hag.core.executor.ActionCategory;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -40,6 +41,10 @@ public final class SendRequestAction implements Action {
 
     /** Context key under which the last API response is stored. */
     public static final String LAST_RESPONSE_KEY = "__api_last_response";
+
+    /** Shared mapper — ObjectMapper is thread-safe and expensive to construct. */
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     @Override
     public String name() { return "SEND_REQUEST"; }
@@ -99,15 +104,15 @@ public final class SendRequestAction implements Action {
         // Merge test-data block if Source column points to a file
         ModifierSet mods = step.getModifiers();
         if (mods != null && mods.hasFilePath() && step.getKey() != null && !step.getKey().isBlank()) {
-            try {
-                String testDataRoot = resolveTestDataRoot(context);
-                Path dataFilePath = Paths.get(testDataRoot).resolve(mods.getFilePath()).normalize();
-                // Load the named block from the JSON file and merge
-                Map<String, Object> block = loadDataBlock(dataFilePath, step.getKey());
-                vars.putAll(block);
-            } catch (Exception e) {
-                // Non-fatal — continue with DataStore variables only
+            String testDataRoot = resolveTestDataRoot(context);
+            Path dataFilePath = Paths.get(testDataRoot).resolve(mods.getFilePath()).normalize();
+            Map<String, Object> block = loadDataBlock(dataFilePath, step.getKey());
+            if (block == null) {
+                throw new IllegalStateException(
+                    "Test data block '" + step.getKey() + "' not found in: " + dataFilePath
+                );
             }
+            vars.putAll(block);
         }
 
         return vars;
@@ -115,13 +120,12 @@ public final class SendRequestAction implements Action {
 
     private Map<String, Object> loadDataBlock(Path filePath, String blockName) {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(filePath.toFile());
+            com.fasterxml.jackson.databind.JsonNode root = MAPPER.readTree(filePath.toFile());
             com.fasterxml.jackson.databind.JsonNode block = root.get(blockName);
-            if (block == null) return java.util.Collections.emptyMap();
-            return mapper.convertValue(block, new com.fasterxml.jackson.core.type.TypeReference<>() {});
-        } catch (Exception e) {
-            return java.util.Collections.emptyMap();
+            if (block == null) return null;
+            return MAPPER.convertValue(block, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } catch (IOException ex) {
+            throw new RuntimeException("Failed to load test data from: " + filePath, ex);
         }
     }
 

@@ -7,8 +7,8 @@ import com.hag.core.config.FrameworkConfig;
 import com.hag.core.resolver.TestDataResolver;
 import com.hag.core.result.ExecutionResult;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * ExecutionContext
@@ -47,55 +47,26 @@ public class ExecutionContext {
        ========================================================== */
 
     /**
-     * Resolves placeholder expressions:
+     * Resolves variable placeholders in {@code input}.
      *
-     *  ${VAR}
-     *  ${SCOPE:VAR}
+     * <p>Supports:
+     * <ul>
+     *   <li>{@code ${VAR}} — global lookup</li>
+     *   <li>{@code ${SCOPE:VAR}} — scoped lookup</li>
+     *   <li>{@code text ${VAR} text} — embedded tokens in a longer string</li>
+     *   <li>{@code ${A}_${B}} — multiple tokens in one value</li>
+     * </ul>
      *
-     * If no placeholder syntax is found,
-     * returns literal value.
+     * <p>Delegates to {@link ValueInterpolator} for consistent multi-token handling.
+     * Returns the input unchanged if no {@code ${...}} tokens are found.
+     *
+     * @throws IllegalStateException if any token cannot be resolved
      */
     public Object resolveValue(String input) {
-
-        if (input == null) {
-            return null;
-        }
-
-        String trimmed = input.trim();
-
-        if (trimmed.startsWith("${")
-                && trimmed.endsWith("}")) {
-
-            String token =
-                    trimmed.substring(2, trimmed.length() - 1);
-
-            DataScope scope = DataScope.GLOBAL;
-            String key = token;
-
-            if (token.contains(":")) {
-                String[] parts =
-                        token.split(":", 2);
-
-                scope =
-                        DataScope.valueOf(
-                                parts[0].toUpperCase()
-                        );
-
-                key = parts[1];
-            }
-
-            Optional<Object> value =
-                    dataStore.get(scope, key);
-
-            return value.orElseThrow(() ->
-                    new IllegalStateException(
-                            "No value found for placeholder: "
-                                    + trimmed
-                    )
-            );
-        }
-
-        return trimmed;
+        if (input == null) return null;
+        // ValueInterpolator handles all token patterns via regex;
+        // if the input has no ${...} it is returned as-is (fast path inside interpolate)
+        return ValueInterpolator.interpolate(input.trim(), this);
     }
 
     /* ==========================================================

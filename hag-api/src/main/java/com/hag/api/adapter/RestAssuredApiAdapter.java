@@ -95,6 +95,7 @@ public final class RestAssuredApiAdapter implements ApiAdapter {
 
         String body = raw.getBody().asString();
         LOG.info("API ← {} (body-length={})", raw.getStatusCode(), body.length());
+        LOG.debug("API ← Body: {}", body);
 
         return new ApiResponse(raw.getStatusCode(), responseHeaders, body);
     }
