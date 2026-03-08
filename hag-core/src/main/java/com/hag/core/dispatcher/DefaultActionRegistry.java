@@ -9,7 +9,7 @@ import java.util.Optional;
 public final class DefaultActionRegistry
         implements ActionRegistry {
 
-    private final Map<String, Action> actions =
+    private final Map<String, java.util.List<Action>> actions =
             new HashMap<>();
 
     private boolean frozen = false;
@@ -23,17 +23,18 @@ public final class DefaultActionRegistry
             );
         }
 
-        actions.put(
-                action.name().toUpperCase(),
-                action
-        );
+        actions.computeIfAbsent(action.name().toUpperCase(), k -> new java.util.ArrayList<>())
+               .add(action);
     }
 
     @Override
     public Optional<Action> resolve(String name) {
-        return Optional.ofNullable(
-                actions.get(name.toUpperCase())
-        );
+        java.util.List<Action> list = actions.get(name.toUpperCase());
+        return (list == null || list.isEmpty()) ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    public java.util.List<Action> resolveAll(String name) {
+        return actions.getOrDefault(name.toUpperCase(), java.util.Collections.emptyList());
     }
 
     @Override

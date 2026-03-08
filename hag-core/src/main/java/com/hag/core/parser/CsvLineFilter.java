@@ -8,6 +8,7 @@ public final class CsvLineFilter {
 
         String trimmedLine = line.trim();
         return trimmedLine.isEmpty()
+                || trimmedLine.replace(",", "").trim().isEmpty()
                 || trimmedLine.startsWith("#")
                 || trimmedLine.startsWith("//");
     }

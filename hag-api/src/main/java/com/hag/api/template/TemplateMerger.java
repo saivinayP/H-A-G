@@ -77,8 +77,10 @@ public final class TemplateMerger {
             headerRaw.forEach((k, v) -> headers.put(k, v == null ? "" : v.toString()));
         }
 
-        // Ensure Content-Type default
-        headers.putIfAbsent("Content-Type", "application/json");
+        // Ensure Content-Type default for body-bearing methods
+        if (Set.of("POST", "PUT", "PATCH").contains(method.toUpperCase())) {
+            headers.putIfAbsent("Content-Type", "application/json");
+        }
 
         // Remaining fields = request body
         String bodyJson;

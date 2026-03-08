@@ -47,6 +47,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Unit testing -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 </project>

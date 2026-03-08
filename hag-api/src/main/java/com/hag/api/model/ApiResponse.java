@@ -7,26 +7,49 @@ import java.util.Map;
 /**
  * Immutable representation of an HTTP API response.
  *
- * <p>Wraps the RestAssured {@code Response} into a neutral model so that
+ * <p>
+ * Wraps the RestAssured {@code Response} into a neutral model so that
  * assertion and store actions don't depend on RestAssured types directly.
  */
 public final class ApiResponse {
 
-    private final int                 statusCode;
+    private final int statusCode;
     private final Map<String, String> headers;
-    private final String              body;        // raw response body as string
+    private final String body; // raw response body as string
 
     public ApiResponse(int statusCode, Map<String, String> headers, String body) {
         this.statusCode = statusCode;
-        this.headers    = headers != null
+        this.headers = headers != null
                 ? Collections.unmodifiableMap(new HashMap<>(headers))
                 : Collections.emptyMap();
-        this.body       = body != null ? body : "";
+        this.body = body != null ? body : "";
     }
 
-    public int                 statusCode() { return statusCode; }
-    public Map<String, String> headers()    { return headers;    }
-    public String              body()       { return body;       }
+    public int statusCode() {
+        return statusCode;
+    }
+
+    public Map<String, String> headers() {
+        return headers;
+    }
+
+    public String body() {
+        return body;
+    }
+
+    // Standard JavaBean getters for reflection and ValueInterpolator
+    // (ObjectPropertyReader)
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public String getBody() {
+        return body;
+    }
 
     /**
      * Returns the value of a named response header, or {@code null} if absent.

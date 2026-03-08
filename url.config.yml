@@ -4,9 +4,13 @@
 # Add new environments as needed under the environments block.
 # ─────────────────────────────────────────────────────────────────────────────
 
-active-environment: dev
+active-environment: demo
 
 environments:
+  demo:
+    application: https://the-internet.herokuapp.com
+    api-base:    https://jsonplaceholder.typicode.com
+
   dev:
     application: https://dev.yourapp.com
     api-base:    https://api-dev.yourapp.com

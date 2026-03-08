@@ -41,20 +41,31 @@ public final class DefaultActionDispatcher implements ActionDispatcher {
                 ActionDescriptorParser.parseModifiers(step.getSource());
         step.setModifiers(modifiers);
 
-        // Resolve the action — look up by primary name only
-        Action action = registry
-                .resolve(descriptor.name())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No action registered for: [" + descriptor.name()
-                                + "]. Full action string: [" + step.getAction() + "]"
-                ));
+        // Resolve all actions matching the primary name
+        java.util.List<Action> actions = registry.resolveAll(descriptor.name());
+        if (actions.isEmpty()) {
+            throw new IllegalStateException(
+                    "No action registered for: [" + descriptor.name()
+                            + "]. Full action string: [" + step.getAction() + "]"
+            );
+        }
 
         // Sub-case validation is delegated to the action implementation
         int retryCount = resolveRetryCount(modifiers);
 
         return RetryExecutor.executeWithRetry(
                 retryCount,
-                () -> action.execute(step, descriptor, context)
+                () -> {
+                    for (Action action : actions) {
+                        ExecutionResult result = action.execute(step, descriptor, context);
+                        if (result.getStatus() != ExecutionResult.Status.SKIPPED) {
+                            return result;
+                        }
+                    }
+                    return ExecutionResult.failure(
+                        "No specific handler found for [" + step.getAction() + "] among " + actions.size() + " registrations"
+                    );
+                }
         );
     }
 

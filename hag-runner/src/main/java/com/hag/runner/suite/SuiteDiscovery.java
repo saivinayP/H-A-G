@@ -52,6 +52,14 @@ public final class SuiteDiscovery {
         try (Stream<Path> walk = Files.walk(scanRoot)) {
             walk.filter(Files::isRegularFile)
                 .filter(p -> p.getFileName().toString().endsWith(".csv"))
+                .filter(p -> {
+                    // Skip if any part of the path (after scanRoot) starts with _
+                    Path relative = scanRoot.relativize(p);
+                    for (Path part : relative) {
+                        if (part.toString().startsWith("_")) return false;
+                    }
+                    return true;
+                })
                 .sorted()
                 .forEach(csv -> {
                     String folderName = csv.getParent().getFileName().toString();

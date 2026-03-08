@@ -68,6 +68,9 @@ public class BulkTestRunner extends HagTestBase {
     @DataProvider(name = "scenarios", parallel = true)
     public Object[][] scenarioProvider() {
         String projectRoot = System.getProperty("user.dir");
+        if (projectRoot.endsWith("hag-runner") || projectRoot.endsWith("hag-runner\\")) {
+            projectRoot = java.nio.file.Paths.get(projectRoot).getParent().toString();
+        }
         List<TestScenario> scenarios = discoverScenarios(projectRoot);
 
         Object[][] data = new Object[scenarios.size()][3];

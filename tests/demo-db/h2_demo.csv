@@ -1,0 +1,22 @@
+Action,Recipient,Source,Key
+LOG,,,Initializing embedded H2 database with demo table and data...
+CHANGE_DATA_STORE,init_user_name,,Alice
+DB_EXECUTE:INLINE,,,"DROP TABLE IF EXISTS demo_users"
+DB_EXECUTE:INLINE,,,"CREATE TABLE demo_users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(50) NOT NULL, status VARCHAR(20) NOT NULL)"
+DB_EXECUTE:INLINE,,,"INSERT INTO demo_users (username, status) VALUES ('${init_user_name}', 'ACTIVE')"
+LOG,,,Executing SELECT query to verify data...
+DB_QUERY:INLINE,,,SELECT * FROM demo_users WHERE username = 'Alice'
+ASSERT_ROW_COUNT,,,1
+ASSERT_COLUMN,username,,Alice
+ASSERT_COLUMN,status,,ACTIVE
+CHANGE_DATA_STORE,new_user_name,,Bob
+CHANGE_DATA_STORE,new_user_status,,PENDING
+LOG,,,Inserting user ${new_user_name} with status ${new_user_status}...
+DB_EXECUTE:INLINE,,,"INSERT INTO demo_users (username, status) VALUES ('${new_user_name}', '${new_user_status}')"
+LOG,,,Verifying row insertion...
+DB_QUERY:INLINE,,,SELECT * FROM demo_users WHERE username = '${new_user_name}'
+ASSERT_ROW_COUNT,,,1
+ASSERT_COLUMN,status,,PENDING
+STORE_DATA:DB,id,,saved_id
+LOG,,,Stored ID from DB is: ${DB:saved_id}
+LOG,,,Embedded database demo complete.

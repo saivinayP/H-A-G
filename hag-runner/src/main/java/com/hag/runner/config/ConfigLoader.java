@@ -162,10 +162,10 @@ public final class ConfigLoader {
             JsonNode node  = YAML_MAPPER.readTree(file.toFile());
             JsonNode paths = node.path("paths");
 
-            String testData  = text(paths, "test-data",  "src/main/resources/testdata");
-            String templates = text(paths, "templates",  "src/main/resources/templates");
-            String scripts   = text(paths, "scripts",    "src/main/resources/scripts");
-            String locators  = text(paths, "locators",   "src/main/resources/locators");
+            String testData  = root.resolve(text(node, "test-data", text(paths, "test-data", "src/main/resources/testdata"))).toString();
+            String templates = root.resolve(text(node, "api-templates", text(paths, "templates", "src/main/resources/templates"))).toString();
+            String scripts   = root.resolve(text(node, "sql-scripts", text(paths, "scripts", "src/main/resources/scripts"))).toString();
+            String locators  = root.resolve(text(node, "locators", text(paths, "locators", "src/main/resources/locators"))).toString();
 
             return new TestdataConfig(testData, templates, scripts, locators);
         } catch (IOException e) {
@@ -184,7 +184,7 @@ public final class ConfigLoader {
         try {
             JsonNode node  = YAML_MAPPER.readTree(file.toFile());
             JsonNode paths = node.path("paths");
-            return text(paths, "locators", "src/main/resources/locators");
+            return root.resolve(text(paths, "locators", "src/main/resources/locators")).toString();
         } catch (IOException e) {
             return "src/main/resources/locators";
         }
