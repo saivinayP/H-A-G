@@ -1,15 +1,21 @@
-# HAG Runner Configuration
-# ─────────────────────────────────────────────────────────────────────────────
-# Controls browser settings, timeouts, retry behaviour, and screenshot output.
-# ─────────────────────────────────────────────────────────────────────────────
+# ── H-A-G Runner Configuration ──────────────────────────────────────────
+# runner.config.yml — controls browser, execution, and bulk run settings
 
 browser:
-  type: chrome           # chrome | firefox | edge
-  headless: false        # true for CI environments
+  type: chrome          # chrome | firefox | edge
+  headless: false       # set true for CI pipelines
 
 execution:
-  timeout-seconds: 30    # default Selenium wait timeout
-  retry-attempts: 1      # number of retry attempts per step on failure
+  thread-count: 2         # parallel test methods
+  timeout-seconds: 30     # implicit wait + step timeout
+  retry-attempts: 2       # retry on failure (RetryExecutor)
 
 screenshots:
-  directory: target/screenshots   # relative to project root
+  directory: target/screenshots
+
+# ── Bulk Run (BulkTestRunner) ────────────────────────────────────────────
+# scan-root: path relative to project root to scan for CSV test files
+# Sub-folder names become TestNG groups automatically.
+# Override with: mvn test -Dhag.test.root=tests/smoke
+test-suite:
+  scan-root: tests

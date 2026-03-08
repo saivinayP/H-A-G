@@ -62,6 +62,8 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             ExecutionContextHolder.set(context);
 
+            // GAP-1: always inject the engine's config before validation
+            context.setConfig(config);
             context.validateConfiguration();
 
             long testStartTime = System.currentTimeMillis();
@@ -178,14 +180,23 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             Step resolvedStep =
                     StepResolver.resolve(step, context);
 
-            ExecutionResult result =
-                    dispatcher.dispatch(resolvedStep, context);
+            ExecutionResult result;
+            try {
+                result = dispatcher.dispatch(resolvedStep, context);
+            } catch (IllegalStateException varEx) {
+                // GAP-2: enrich missing-variable errors with step context
+                throw new StepExecutionException(
+                        "Step " + stepIndex + " [" + step.getAction() + "]: "
+                                + varEx.getMessage()
+                );
+            }
 
             context.setLastResult(result);
 
             if (result.isFailure()) {
                 throw new StepExecutionException(
-                        result.getMessage()
+                        "Step " + stepIndex + " [" + step.getAction() + "]: "
+                                + result.getMessage()
                 );
             }
 

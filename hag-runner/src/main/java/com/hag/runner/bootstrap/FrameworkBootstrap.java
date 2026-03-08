@@ -15,7 +15,6 @@ import com.hag.core.reporting.engine.DefaultEventPublisher;
 import com.hag.core.reporting.engine.EventPublisher;
 import com.hag.db.bootstrap.DbBootstrap;
 import com.hag.runner.config.ConfigLoader;
-import com.hag.runner.config.ConfigLoader.DbConnectionConfig;
 import com.hag.ui.bootstrap.UiBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,22 +31,14 @@ public final class FrameworkBootstrap {
     private FrameworkBootstrap() {}
 
     /**
-     * Creates a fully-wired {@link ExecutionEngine} using config files
-     * in the current working directory.
-     */
-    public static ExecutionEngine createEngine(FailureArtifactProvider artifactProvider) {
-        return createEngine(artifactProvider, System.getProperty("user.dir"));
-    }
-
-    /**
      * Creates a fully-wired {@link ExecutionEngine} from {@code projectRoot}.
      *
-     * @param artifactProvider failure screenshot provider (can be {@code null} for API-only)
      * @param projectRoot      directory containing url/runner/testdata config files
+     * @param artifactProvider failure screenshot provider (can be {@code null} for API-only)
      */
     public static ExecutionEngine createEngine(
-            FailureArtifactProvider artifactProvider,
-            String projectRoot
+            String projectRoot,
+            FailureArtifactProvider artifactProvider
     ) {
         LOG.info("HAG → Bootstrap starting from: {}", projectRoot);
 
@@ -61,7 +52,7 @@ public final class FrameworkBootstrap {
         LOG.info("HAG → Core actions registered");
 
         UiBootstrap.registerUiActions(registry);
-        LOG.info("HAG → UI actions registered (23)");
+        LOG.info("HAG → UI actions registered");
 
         ApiBootstrap.registerApiActions(registry);
         LOG.info("HAG → API actions registered");
@@ -93,12 +84,5 @@ public final class FrameworkBootstrap {
                 artifactProvider,
                 config
         );
-    }
-
-    /**
-     * Loads DB connection config exposed for per-thread adapter wiring in HagTestBase.
-     */
-    public static DbConnectionConfig loadDbConfig(String projectRoot) {
-        return ConfigLoader.loadDbConfig(projectRoot);
     }
 }

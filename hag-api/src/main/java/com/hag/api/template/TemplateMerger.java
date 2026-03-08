@@ -55,7 +55,7 @@ public final class TemplateMerger {
             String baseUrl
     ) {
         String raw = readFile(templatePath);
-        String substituted = substituteVariables(raw, variables);
+        String substituted = substituteVariables(raw, variables, templatePath.getFileName().toString());
 
         Map<String, Object> parsed;
         try {
@@ -95,18 +95,36 @@ public final class TemplateMerger {
 
     /* ------------------------------------------------------------------ */
 
-    /** Replaces ${VAR} and ${SCOPE:VAR} tokens with values from the map. */
-    static String substituteVariables(String template, Map<String, Object> vars) {
-        if (vars == null || vars.isEmpty()) return template;
+    /**
+     * Replaces ${VAR} and ${SCOPE:VAR} tokens with values from the map.
+     *
+     * @throws IllegalStateException if any token cannot be resolved
+     */
+    static String substituteVariables(String template, Map<String, Object> vars, String templateName) {
+        if (vars == null || vars.isEmpty()) {
+            // Check no tokens remain unresolved
+            Matcher check = VAR_PAT.matcher(template);
+            if (check.find()) {
+                throw new IllegalStateException(
+                    "Unresolved variable in template [" + templateName + "]: ${" + check.group(1) + "}"
+                );
+            }
+            return template;
+        }
 
         Matcher m = VAR_PAT.matcher(template);
         StringBuilder sb = new StringBuilder();
 
         while (m.find()) {
-            String token = m.group(1);                    // e.g. "username" or "API:token"
+            String token = m.group(1);
             Object value = resolveToken(token, vars);
-            String replacement = value == null ? "" : Matcher.quoteReplacement(value.toString());
-            m.appendReplacement(sb, replacement);
+            if (value == null) {
+                throw new IllegalStateException(
+                    "Unresolved variable in template [" + templateName + "]: ${" + token + "}. "
+                    + "Available keys: " + vars.keySet()
+                );
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(value.toString()));
         }
         m.appendTail(sb);
         return sb.toString();

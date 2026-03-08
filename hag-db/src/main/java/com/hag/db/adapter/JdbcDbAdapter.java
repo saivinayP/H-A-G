@@ -113,8 +113,24 @@ public final class JdbcDbAdapter implements DbAdapter {
     private DbQueryResult lastQueryResult;
     private int           lastAffectedRows = -1;
 
-    public DbQueryResult getLastQueryResult() { return lastQueryResult; }
-    public int           getLastAffectedRows()  { return lastAffectedRows; }
+    /**
+     * Returns the cached result from the most recent {@code DB_QUERY} call.
+     *
+     * @throws IllegalStateException if called before any {@code DB_QUERY} has run
+     */
+    public DbQueryResult getLastQueryResult() {
+        if (lastQueryResult == null) {
+            throw new IllegalStateException(
+                "No DB_QUERY result available. "
+                + "ASSERT_ROW_COUNT, ASSERT_COLUMN, and STORE_DATA:DB require "
+                + "a preceding DB_QUERY step in the same test."
+            );
+        }
+        return lastQueryResult;
+    }
+
+    public int getLastAffectedRows() { return lastAffectedRows; }
+
 
     /** Closes the JDBC connection. Called during framework teardown. */
     public void close() {
