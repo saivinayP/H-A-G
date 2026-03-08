@@ -1,0 +1,18 @@
+{
+  "username": {
+    "type": "id",
+    "value": "username"
+  },
+  "password": {
+    "type": "id",
+    "value": "password"
+  },
+  "loginButton": {
+    "type": "css",
+    "value": "button.radius"
+  },
+  "flashMessage": {
+    "type": "id",
+    "value": "flash"
+  }
+}

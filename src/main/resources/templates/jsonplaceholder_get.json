@@ -1,0 +1,7 @@
+{
+  "_method": "GET",
+  "_endpoint": "/posts/${post_id}",
+  "_headers": {
+    "Accept": "application/json"
+  }
+}

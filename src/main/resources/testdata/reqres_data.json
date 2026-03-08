@@ -1,0 +1,9 @@
+{
+  "UsersBlock": {
+    "page_num": 2
+  },
+  "CreateUserBlock": {
+    "new_user_name": "morpheus",
+    "new_user_job": "leader"
+  }
+}

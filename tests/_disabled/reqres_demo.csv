@@ -1,0 +1,11 @@
+Action,Recipient,Source,Key
+LOG,,,Getting User List...
+SEND_REQUEST,reqres_get.json,reqres_data.json|scope=API,UsersBlock
+ASSERT_STATUS,,,200
+STORE_DATA:RESPONSE,$.data[0].id,,first_user_id
+LOG,,,First user ID is: ${API:first_user_id}
+LOG,,,Creating User...
+SEND_REQUEST,reqres_create.json,reqres_data.json|scope=API,CreateUserBlock
+ASSERT_STATUS,,,201
+STORE_DATA:RESPONSE,$.id,,new_user_id
+LOG,,,Created user ID is: ${API:new_user_id}

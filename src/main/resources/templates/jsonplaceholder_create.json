@@ -1,0 +1,10 @@
+{
+  "_method": "POST",
+  "_endpoint": "/posts",
+  "_headers": {
+    "Content-Type": "application/json"
+  },
+  "title": "${post_title}",
+  "body": "${post_body}",
+  "userId": "${user_id}"
+}

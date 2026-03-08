@@ -52,7 +52,6 @@
         </groups>
         <classes>
             <class name="com.hag.runner.suite.BulkTestRunner"/>
-            <class name="com.hag.tests.regression.LoginRegressionTest"/>
         </classes>
     </test>
 

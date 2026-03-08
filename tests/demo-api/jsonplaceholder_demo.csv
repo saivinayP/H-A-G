@@ -1,0 +1,12 @@
+Action,Recipient,Source,Key
+LOG,,,Getting Post Details from JSONPlaceholder...
+SEND_REQUEST,jsonplaceholder_get.json,jsonplaceholder_data.json|scope=API,GetPostBlock
+ASSERT_STATUS,,,200
+ASSERT_RESPONSE,id,,1
+LOG,,,Successfully retrieved post 1.
+LOG,,,Creating a new Post...
+SEND_REQUEST,jsonplaceholder_create.json,jsonplaceholder_data.json|scope=API,CreatePostBlock
+ASSERT_STATUS,,,201
+ASSERT_RESPONSE,title,,H-A-G Demo
+STORE_DATA:RESPONSE,id,,new_post_id
+LOG,,,Created post ID is: ${API:new_post_id}

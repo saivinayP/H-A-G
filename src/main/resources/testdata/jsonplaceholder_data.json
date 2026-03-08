@@ -1,0 +1,10 @@
+{
+  "GetPostBlock": {
+    "post_id": 1
+  },
+  "CreatePostBlock": {
+    "post_title": "H-A-G Demo",
+    "post_body": "This is a demo post from Hybrid Automation Grid",
+    "user_id": 1
+  }
+}

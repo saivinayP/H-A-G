@@ -72,8 +72,8 @@ public final class AssertTextAction implements UiAction {
 
             String expected = resolvedValue.toString();
 
-            boolean ignoreCase = descriptor.hasFlag("ignore-case");
-            boolean contains   = descriptor.hasFlag("contains");
+            boolean ignoreCase = descriptor.hasFlag("IGNORE-CASE") || descriptor.hasFlag("ignore-case");
+            boolean contains   = descriptor.isSubCase("CONTAINS") || descriptor.hasFlag("contains");
 
             String actual = ignoreCase
                     ? actualText.toLowerCase()

@@ -10,5 +10,7 @@ public interface ActionRegistry {
 
     Optional<Action> resolve(String name);
 
+    java.util.List<Action> resolveAll(String name);
+
     void freeze();
 }

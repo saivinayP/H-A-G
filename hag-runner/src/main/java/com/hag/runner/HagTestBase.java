@@ -88,6 +88,9 @@ public abstract class HagTestBase {
         if (sharedEngine != null) return;   // already initialised by another test class
 
         String projectRoot = System.getProperty("user.dir");
+        if (projectRoot.endsWith("hag-runner") || projectRoot.endsWith("hag-runner\\")) {
+            projectRoot = java.nio.file.Paths.get(projectRoot).getParent().toString();
+        }
 
         // RUN-1: cache heavy config reads once per suite, not per method
         cachedRunnerConfig = ConfigLoader.loadRunnerConfig(projectRoot);
@@ -164,6 +167,7 @@ public abstract class HagTestBase {
         ExecutionContext context = new ExecutionContext();
         context.setUiAdapter(new SeleniumUiAdapter(driver));
         context.setApiAdapter(new RestAssuredApiAdapter(true));
+        context.setTestDataResolver(new com.hag.core.resolver.DefaultTestDataResolver());
 
         // DB-1: wire DB adapter from cached config (close() called in teardown)
         DbConnectionConfig dbCfg = cachedDbConfig;
