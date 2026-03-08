@@ -4,15 +4,15 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 paths:
-  locators:   src/main/resources/locators         # element locator JSON files
-  test-data:  src/main/resources/testdata         # test data JSON files
-  templates:  src/main/resources/templates        # API request template JSON files
-  scripts:    src/main/resources/scripts          # SQL script files
+  locators:       src/main/resources/locators         # element locator JSON files
+  test-data:      src/main/resources/testdata         # test data JSON files
+  api-templates:  src/main/resources/templates        # API request template JSON files
+  sql-scripts:    src/main/resources/scripts          # SQL script files
 
 # ── Database (optional) ───────────────────────────────────────────────────────
 # Remove or leave url blank to run without DB validation.
 # Use ${env.VAR} to read from environment variables (recommended for credentials).
 database:
-  url:      ""                        # e.g. jdbc:mysql://localhost:3306/testdb
-  username: ""                        # e.g. qa_user
-  password: ""                        # e.g. ${env.DB_PASSWORD}
+  url:      "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
+  username: "sa"
+  password: ""
