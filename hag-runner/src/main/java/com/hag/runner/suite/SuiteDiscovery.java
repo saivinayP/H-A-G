@@ -41,13 +41,27 @@ public final class SuiteDiscovery {
      */
     public static List<TestScenario> discover(Path scanRoot, Map<String, String> groupAliases) {
 
-        if (!Files.isDirectory(scanRoot)) {
-            LOG.warn("SuiteDiscovery: scan root does not exist or is not a directory: {}", scanRoot);
+        if (!Files.exists(scanRoot)) {
+            LOG.warn("SuiteDiscovery: scan root does not exist: {}", scanRoot);
             return Collections.emptyList();
         }
 
         Map<String, String> aliases = groupAliases != null ? groupAliases : Collections.emptyMap();
         List<TestScenario> scenarios = new ArrayList<>();
+
+        if (Files.isRegularFile(scanRoot)) {
+            if (scanRoot.getFileName().toString().endsWith(".csv")) {
+                String folderName = scanRoot.getParent().getFileName().toString();
+                String group = aliases.getOrDefault(folderName, folderName);
+                String testName = deriveTestName(scanRoot);
+                scenarios.add(new TestScenario(testName, scanRoot, group));
+                LOG.debug("SuiteDiscovery → {} [group={}]", testName, group);
+            } else {
+                LOG.warn("SuiteDiscovery: scan root is a file but not a .csv: {}", scanRoot);
+            }
+            LOG.info("SuiteDiscovery → discovered {} scenarios from file: {}", scenarios.size(), scanRoot);
+            return Collections.unmodifiableList(scenarios);
+        }
 
         try (Stream<Path> walk = Files.walk(scanRoot)) {
             walk.filter(Files::isRegularFile)
