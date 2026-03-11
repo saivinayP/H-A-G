@@ -50,8 +50,17 @@ That's it. Four columns separated by commas. H-A-G reads it and clicks the login
 
 ---
 
-## 3. Project Folder Structure
+## 3. Project Folder Structure and Modules
 
+H-A-G is designed with a modular architecture so components are loosely coupled. Here is the relevance of each module:
+
+- **`hag-core`**: The brain of the framework. Contains the CSV parser, action dispatcher, shared `DataStore` for variables, configuration loaders, and the event-driven reporting engine (including custom HTML reports).
+- **`hag-ui`**: The browser automation module. Acts as a wrapper around Selenium WebDriver, providing 23 built-in UI actions (click, input, select, wait, drag-drop, assert).
+- **`hag-api`**: The REST automation module. Powered by RestAssured, it parses JSON templates to construct and execute API requests and assert responses.
+- **`hag-db`**: The database automation module. Uses pure JDBC to connect to databases (MySQL, H2, etc.), execute SQL scripts, query data, and assert row counts or column values.
+- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `BulkTestRunner` to dynamically execute all CSV test scenarios.
+
+### Folder Structure
 After cloning, your project should look like this. You will be creating files in the areas marked `← YOU CREATE THIS`.
 
 ```
@@ -732,4 +741,4 @@ ${URL:application}    URL from url.config.yml (active environment)
 
 ---
 
-*H-A-G User Guide v1.0 — For the latest action reference, see the [BRD & Gap Analysis](./HAG_BRD_and_Gap_Analysis.md)*
+*H-A-G User Guide v1.0*

@@ -150,53 +150,41 @@ FINALLY
 NAVIGATE,,,${URL:application}/logout
 ```
 
-### 7. Create your test class
-
-```java
-public class LoginTest extends HagTestBase {
-
-    @BeforeMethod
-    public void before() { setUpTest(); }
-
-    @Test
-    public void validLoginShouldShowDashboard() {
-        runTest("Valid Login", "tests/login/valid_login.csv");
-    }
-
-    @Test
-    public void lockedUserShouldSeeError() {
-        runTest("Locked User Login", "tests/login/locked_login.csv");
-    }
-}
-```
-
-### 8. Run
+### 7. Run
 
 ```bash
 # Default (Chrome, non-headless)
-mvn test -pl hag-runner -am
+mvn clean test -pl hag-runner -am
 
 # Firefox, headless (CI)
-mvn test -pl hag-runner -am -Dbrowser=firefox -Dheadless=true
+mvn clean test -pl hag-runner -am -Dbrowser=firefox -Dheadless=true
 
 # Parallel — 4 threads
-mvn test -pl hag-runner -am -Dthread.count=4
+mvn clean test -pl hag-runner -am -Dthread.count=4
 
 # Different environment
-mvn test -pl hag-runner -am -Denv=staging
+mvn clean test -pl hag-runner -am -Denv=staging
 ```
 
 ---
 
-## Project Structure
+## Framework Modules
+
+H-A-G is designed with a modular architecture so components are loosely coupled. Here is the relevance of each module:
+
+- **`hag-core`**: The brain of the framework. Contains the CSV parser, action dispatcher, shared `DataStore` for variables, configuration loaders, and the event-driven reporting engine (including custom HTML reports).
+- **`hag-ui`**: The browser automation module. Acts as a wrapper around Selenium WebDriver, providing 23 built-in UI actions (click, input, select, wait, drag-drop, assert).
+- **`hag-api`**: The REST automation module. Powered by RestAssured, it parses JSON templates to construct and execute API requests and assert responses.
+- **`hag-db`**: The database automation module. Uses pure JDBC to connect to databases (MySQL, H2, etc.), execute SQL scripts, query data, and assert row counts or column values.
+- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `BulkTestRunner` to dynamically execute all CSV test scenarios without any custom Java classes required.
 
 ```
 H-A-G/
-├── hag-core/               Core framework — parser, dispatcher, DataStore, config
-├── hag-ui/                 Selenium UI adapter — 23 actions
+├── hag-core/               Core framework — parser, dispatcher, DataStore, config, reporting
+├── hag-ui/                 Selenium UI adapter
 ├── hag-api/                REST adapter — RestAssured 5.4
-├── hag-db/                 JDBC DB adapter — MySQL + MSSQL
-├── hag-runner/             TestNG runner, FrameworkBootstrap, HagTestBase
+├── hag-db/                 JDBC DB adapter
+├── hag-runner/             TestNG runner, FrameworkBootstrap, BulkTestRunner
 │
 ├── url.config.yml          ← Environment URLs (dev / staging / prod)
 ├── runner.config.yml       ← Browser, timeout, retry, screenshot dir
@@ -345,8 +333,7 @@ CsvTestParser (OpenCSV)
 
 | Document | Description |
 |---|---|
-| [HAG User Guide](docs/HAG_User_Guide.md) | Complete step-by-step guide for writing and running tests |
-| [BRD & Gap Analysis](docs/HAG_BRD_and_Gap_Analysis.md) | Business requirements, design decisions, action taxonomy |
+| [HAG User Guide](docs/HAG_User_Guide.md) | Complete step-by-step guide for writing and running tests, setting up the framework, and detailed action reference |
 
 ---
 
