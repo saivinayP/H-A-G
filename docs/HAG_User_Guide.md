@@ -563,13 +563,13 @@ STORE_DATA:RESPONSE,data.token,,authToken
 
 ```bash
 # Run all tests defined in runner.config.yml
-mvn test -pl hag-runner
+mvn clean test -pl hag-runner -am
 
 # Override the environment
-mvn test -pl hag-runner -Denv=staging
+mvn clean test -pl hag-runner -am -Denv=staging
 
-# Run a single specific test file
-mvn test -pl hag-runner -Dtest.file=tests/login/login_flow.csv
+# Run a single specific test file (bypassing the folder scan)
+mvn clean test -pl hag-runner -am "-Dhag.test.root=hag-resource/tests/demo-ui/internet_login.csv"
 ```
 
 ### Understanding results
