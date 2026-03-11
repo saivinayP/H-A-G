@@ -13,6 +13,7 @@ import com.hag.core.parser.IncludeResolver;
 import com.hag.core.reporting.engine.ConsoleReportEngine;
 import com.hag.core.reporting.engine.DefaultEventPublisher;
 import com.hag.core.reporting.engine.EventPublisher;
+import com.hag.core.reporting.engine.HtmlReportEngine;
 import com.hag.db.bootstrap.DbBootstrap;
 import com.hag.runner.config.ConfigLoader;
 import com.hag.ui.bootstrap.UiBootstrap;
@@ -68,8 +69,12 @@ public final class FrameworkBootstrap {
 
         // ── Event publishing ─────────────────────────────────────────────
         EventPublisher eventPublisher = new DefaultEventPublisher(
-                List.of(new ConsoleReportEngine())
+                List.of(
+                    new ConsoleReportEngine(),
+                    new HtmlReportEngine(System.getProperty("hag.run.name", "Test Execution"))
+                )
         );
+        eventPublisher.startSuite();
 
         // ── Include resolver ─────────────────────────────────────────────
         IncludeResolver includeResolver = new IncludeResolver(parser, eventPublisher);

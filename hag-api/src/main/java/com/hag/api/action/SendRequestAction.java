@@ -131,12 +131,12 @@ public final class SendRequestAction implements Action {
 
     private String resolveTemplatesRoot(ExecutionContext context) {
         String tp = context.getConfig() != null ? context.getConfig().getTemplatesPath() : null;
-        return (tp != null && !tp.isBlank()) ? tp : "src/main/resources/templates";
+        return (tp != null && !tp.isBlank()) ? tp : "hag-resource/templates";
     }
 
     private String resolveTestDataRoot(ExecutionContext context) {
         String td = context.getConfig() != null ? context.getConfig().getTestDataPath() : null;
-        return (td != null && !td.isBlank()) ? td : "src/main/resources/testdata";
+        return (td != null && !td.isBlank()) ? td : "hag-resource/testdata";
     }
 
     private String resolveApiBaseUrl(ExecutionContext context) {

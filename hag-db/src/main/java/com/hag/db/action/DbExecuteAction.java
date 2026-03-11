@@ -80,6 +80,6 @@ public final class DbExecuteAction implements Action {
 
     private String resolveSqlRoot(ExecutionContext context) {
         String path = context.getConfig() != null ? context.getConfig().getSqlScriptsPath() : null;
-        return (path != null && !path.isBlank()) ? path : "src/main/resources/scripts";
+        return (path != null && !path.isBlank()) ? path : "hag-resource/scripts";
     }
 }

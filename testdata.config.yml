@@ -4,10 +4,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 paths:
-  locators:       src/main/resources/locators         # element locator JSON files
-  test-data:      src/main/resources/testdata         # test data JSON files
-  api-templates:  src/main/resources/templates        # API request template JSON files
-  sql-scripts:    src/main/resources/scripts          # SQL script files
+  locators:       hag-resource/locators         # element locator JSON files
+  test-data:      hag-resource/testdata         # test data JSON files
+  api-templates:  hag-resource/templates        # API request template JSON files
+  sql-scripts:    hag-resource/scripts          # SQL script files
 
 # ── Database (optional) ───────────────────────────────────────────────────────
 # Remove or leave url blank to run without DB validation.

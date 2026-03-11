@@ -9,7 +9,15 @@ import com.hag.core.parser.CsvTestParser;
 import com.hag.core.parser.IncludeResolver;
 import com.hag.core.result.ExecutionResult;
 import com.hag.core.reporting.engine.EventPublisher;
-import com.hag.core.reporting.events.*;
+import com.hag.core.reporting.events.Event;
+import com.hag.core.reporting.events.EventType;
+import com.hag.core.reporting.events.FinallyFinishedEvent;
+import com.hag.core.reporting.events.FinallyStartedEvent;
+import com.hag.core.reporting.events.StepFailedEvent;
+import com.hag.core.reporting.events.StepFinishedEvent;
+import com.hag.core.reporting.events.StepStartedEvent;
+import com.hag.core.reporting.events.TestFinishedEvent;
+import com.hag.core.reporting.events.TestStartedEvent;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,6 +53,10 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         this.includeResolver = Objects.requireNonNull(includeResolver);
         this.artifactProvider = Objects.requireNonNull(artifactProvider);
         this.config = Objects.requireNonNull(config);
+    }
+    
+    public EventPublisher getEventPublisher() {
+        return eventPublisher;
     }
 
     @Override

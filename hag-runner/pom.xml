@@ -113,7 +113,15 @@
                             <name>dataproviderthreadcount</name>
                             <value>${thread.count}</value>
                         </property>
+                        <property>
+                            <name>usedefaultlisteners</name>
+                            <value>false</value>
+                        </property>
                     </properties>
+
+                    <!-- Disable default file-based reports -->
+                    <disableXmlReport>true</disableXmlReport>
+                    <useFile>false</useFile>
 
                     <!-- Reuse JVM for performance -->
                     <forkCount>1</forkCount>

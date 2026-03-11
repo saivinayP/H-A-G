@@ -14,9 +14,23 @@ public class DefaultEventPublisher implements EventPublisher {
     }
 
     @Override
+    public void startSuite() {
+        for (ReportEngine engine : reportEngines) {
+            engine.startSuite();
+        }
+    }
+
+    @Override
     public void publish(Event event) {
         for (ReportEngine engine : reportEngines) {
             engine.onEvent(event);
+        }
+    }
+
+    @Override
+    public void endSuite() {
+        for (ReportEngine engine : reportEngines) {
+            engine.endSuite();
         }
     }
 }
