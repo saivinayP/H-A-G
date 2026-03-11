@@ -30,6 +30,7 @@
         <module>hag-api</module>
         <module>hag-db</module>
         <module>hag-runner</module>
+        <module>hag-resource</module>
     </modules>
 
     <dependencyManagement>

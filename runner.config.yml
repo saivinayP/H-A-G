@@ -18,4 +18,4 @@ screenshots:
 # Sub-folder names become TestNG groups automatically.
 # Override with: mvn test -Dhag.test.root=tests/smoke
 test-suite:
-  scan-root: tests
+  scan-root: hag-resource/tests

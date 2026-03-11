@@ -50,12 +50,18 @@ Desktop.ini
 # =========================
 *.log
 logs/
+*log*
 
 # =========================
 # Test Reports / Artifacts
 # =========================
 reports/
 screenshots/
+test-output/
+test-reports/
+output/
+**TEST_RESULTS/
+hag-runner/TEST_RESULTS/
 
 # =========================
 # Temporary / Runtime files

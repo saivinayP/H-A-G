@@ -151,10 +151,10 @@ public final class ConfigLoader {
         Path file = root.resolve("testdata.config.yml");
         if (!Files.exists(file)) {
             return new TestdataConfig(
-                    "src/main/resources/testdata",
-                    "src/main/resources/templates",
-                    "src/main/resources/scripts",
-                    "src/main/resources/locators"
+                    "hag-resource/testdata",
+                    "hag-resource/templates",
+                    "hag-resource/scripts",
+                    "hag-resource/locators"
             );
         }
 
@@ -162,10 +162,10 @@ public final class ConfigLoader {
             JsonNode node  = YAML_MAPPER.readTree(file.toFile());
             JsonNode paths = node.path("paths");
 
-            String testData  = root.resolve(text(node, "test-data", text(paths, "test-data", "src/main/resources/testdata"))).toString();
-            String templates = root.resolve(text(node, "api-templates", text(paths, "templates", "src/main/resources/templates"))).toString();
-            String scripts   = root.resolve(text(node, "sql-scripts", text(paths, "scripts", "src/main/resources/scripts"))).toString();
-            String locators  = root.resolve(text(node, "locators", text(paths, "locators", "src/main/resources/locators"))).toString();
+            String testData  = root.resolve(text(node, "test-data", text(paths, "test-data", "hag-resource/testdata"))).toString();
+            String templates = root.resolve(text(node, "api-templates", text(paths, "templates", "hag-resource/templates"))).toString();
+            String scripts   = root.resolve(text(node, "sql-scripts", text(paths, "scripts", "hag-resource/scripts"))).toString();
+            String locators  = root.resolve(text(node, "locators", text(paths, "locators", "hag-resource/locators"))).toString();
 
             return new TestdataConfig(testData, templates, scripts, locators);
         } catch (IOException e) {
@@ -180,13 +180,13 @@ public final class ConfigLoader {
     public static String loadLocatorsPath(String projectRoot) {
         Path root = Paths.get(projectRoot).toAbsolutePath();
         Path file = root.resolve("testdata.config.yml");
-        if (!Files.exists(file)) return "src/main/resources/locators";
+        if (!Files.exists(file)) return "hag-resource/locators";
         try {
             JsonNode node  = YAML_MAPPER.readTree(file.toFile());
             JsonNode paths = node.path("paths");
-            return root.resolve(text(paths, "locators", "src/main/resources/locators")).toString();
+            return root.resolve(text(paths, "locators", "hag-resource/locators")).toString();
         } catch (IOException e) {
-            return "src/main/resources/locators";
+            return "hag-resource/locators";
         }
     }
 

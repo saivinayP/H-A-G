@@ -1,7 +1,0 @@
-{
-  "usernameField":  { "type": "id",    "value": "username" },
-  "passwordField":  { "type": "css",   "value": "input[type='password']" },
-  "loginButton":    { "type": "id",    "value": "loginBtn" },
-  "errorMessage":   { "type": "xpath", "value": "//div[contains(@class,'error')]" },
-  "forgotPassword": { "type": "css",   "value": "a.forgot-password" }
-}

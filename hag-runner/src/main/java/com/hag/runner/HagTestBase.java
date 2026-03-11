@@ -99,7 +99,7 @@ public abstract class HagTestBase {
         SeleniumArtifactProvider artifactProvider = new SeleniumArtifactProvider(
                 () -> {
                     WebDriver d = threadDriver.get();
-                    return d != null ? new SeleniumUiAdapter(d) : null;
+                    return d != null ? new SeleniumUiAdapter(() -> d) : null;
                 }
         );
         sharedEngine = FrameworkBootstrap.createEngine(projectRoot, artifactProvider);
@@ -117,6 +117,19 @@ public abstract class HagTestBase {
      */
     @AfterSuite(alwaysRun = true)
     public synchronized void tearDownSuite() {
+        if (sharedEngine != null) {
+            // Need to trigger endSuite on EventPublisher (which is encapsulated in DefaultExecutionEngine)
+            // But we don't have direct access. Let's cast it since we know the implementation.
+            if (sharedEngine instanceof com.hag.core.engine.DefaultExecutionEngine eng) {
+                System.out.println("HAG → Triggering EventPublisher.endSuite() across all ReportEngines...");
+                eng.getEventPublisher().endSuite();
+            } else {
+                System.out.println("HAG → sharedEngine is NOT an instance of DefaultExecutionEngine: " + sharedEngine.getClass().getName());
+            }
+        } else {
+            System.out.println("HAG → sharedEngine is null in tearDownSuite, skip ending suite reports");
+        }
+        
         sharedEngine       = null;
         cachedDbConfig     = null;
         cachedRunnerConfig = null;
@@ -154,18 +167,27 @@ public abstract class HagTestBase {
      * @param headless run without a visible window
      */
     protected void setUpTest(String browser, boolean headless) {
-        WebDriver driver = createDriver(browser, headless);
-        threadDriver.set(driver);
-
-        // Apply implicit wait timeout from config (UI-4 fix)
-        RunnerConfig runnerCfg = cachedRunnerConfig;
-        if (runnerCfg != null && runnerCfg.timeoutSeconds() > 0) {
-            driver.manage().timeouts()
-                  .implicitlyWait(Duration.ofSeconds(runnerCfg.timeoutSeconds()));
-        }
+        // Create a lazy supplier for the WebDriver
+        java.util.function.Supplier<WebDriver> lazyDriver = () -> {
+            WebDriver d = threadDriver.get();
+            if (d == null) {
+                d = createDriver(browser, headless);
+                threadDriver.set(d);
+                
+                // Apply implicit wait timeout from config
+                RunnerConfig runnerCfg = cachedRunnerConfig;
+                if (runnerCfg != null && runnerCfg.timeoutSeconds() > 0) {
+                    d.manage().timeouts()
+                      .implicitlyWait(Duration.ofSeconds(runnerCfg.timeoutSeconds()));
+                }
+                LOG.info("HAG → Browser launched [thread={}, browser={}{}]",
+                        Thread.currentThread().getName(), browser, headless ? " headless" : "");
+            }
+            return d;
+        };
 
         ExecutionContext context = new ExecutionContext();
-        context.setUiAdapter(new SeleniumUiAdapter(driver));
+        context.setUiAdapter(new SeleniumUiAdapter(lazyDriver));
         context.setApiAdapter(new RestAssuredApiAdapter(true));
         context.setTestDataResolver(new com.hag.core.resolver.DefaultTestDataResolver());
 
@@ -177,8 +199,8 @@ public abstract class HagTestBase {
         }
 
         threadContext.set(context);
-        LOG.info("HAG → Test context ready [thread={}, browser={}{}]",
-                Thread.currentThread().getName(), browser, headless ? " headless" : "");
+        LOG.info("HAG → Test context ready [thread={}]",
+                Thread.currentThread().getName());
     }
 
     /**
@@ -225,10 +247,12 @@ public abstract class HagTestBase {
         sharedEngine.execute(testName, testFile, context);
     }
 
-    // ── Accessors ─────────────────────────────────────────────────────────
-
     protected ExecutionContext getContext() { return threadContext.get(); }
     protected WebDriver        getDriver()  { return threadDriver.get();  }
+    
+    protected static ExecutionEngine getSharedEngine() {
+        return sharedEngine;
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────
 

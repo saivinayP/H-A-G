@@ -7,9 +7,9 @@ public final class FrameworkConfigBuilder {
     private String baseUrl                   = "";
     private String apiBaseUrl                = "";
     private String screenshotDirectory       = "target/screenshots";
-    private String testDataPath              = "src/main/resources/testdata";
-    private String templatesPath             = "src/main/resources/templates";
-    private String sqlScriptsPath            = "src/main/resources/scripts";
+    private String testDataPath              = "hag-resource/testdata";
+    private String templatesPath             = "hag-resource/templates";
+    private String sqlScriptsPath            = "hag-resource/scripts";
 
     public FrameworkConfigBuilder defaultWaitTimeoutSeconds(int v) { this.defaultWaitTimeoutSeconds = v; return this; }
     public FrameworkConfigBuilder defaultRetryAttempts(int v)      { this.defaultRetryAttempts      = v; return this; }
