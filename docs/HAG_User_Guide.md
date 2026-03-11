@@ -21,7 +21,8 @@
 13. [Step 10 — Create API Request Templates](#13-step-10--create-api-request-templates)
 14. [Step 11 — Run Your Tests](#14-step-11--run-your-tests)
 15. [Complete Worked Example](#15-complete-worked-example)
-16. [Quick Reference Card](#16-quick-reference-card)
+16. [Full Action Reference](#16-full-action-reference)
+17. [Quick Reference Card](#17-quick-reference-card)
 
 ---
 
@@ -681,7 +682,66 @@ NAVIGATE,,,${URL:application}/logout
 
 ---
 
-## 16. Quick Reference Card
+## 16. Full Action Reference
+
+### UI Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `NAVIGATE` | `:BACK` `:FORWARD` `:REFRESH` | Browser navigation |
+| `CLICK` | `:DOUBLE` `:RIGHT` `:JS` `:HOLD` | Mouse interactions |
+| `INPUT` | `:KEY` `:FILE` | Type text / keyboard / file upload |
+| `SELECT` | `:TEXT` `:INDEX` `:VALUE` | Dropdown selection |
+| `HOVER` | | Move mouse to element |
+| `SCROLL` | `:TOP` `:BOTTOM` `:INTO_VIEW` | Page/element scroll |
+| `CLEAR` | | Clear input field |
+| `DRAG_DROP` | | Drag source → target |
+| `JS_CLICK` | | Click via JavaScript |
+| `JS_EXECUTE` | | Run arbitrary JS |
+| `GET_TEXT` | | Read element text → Key variable |
+| `WAIT` | `:VISIBLE` `:INVISIBLE` `:TEXT` `:CLICKABLE` | Explicit waits |
+| `ASSERT_TEXT` | `:CONTAINS` `:STARTS_WITH` `:ENDS_WITH` | Text assertions |
+| `ASSERT_VISIBLE` | | Element is displayed |
+| `ASSERT_HIDDEN` | | Element is not displayed |
+| `ASSERT_ENABLED` / `ASSERT_DISABLED` | | Element state |
+| `ASSERT_SELECTED` | | Checkbox/radio state |
+| `ASSERT_ATTRIBUTE` | | DOM attribute match |
+| `ASSERT_COUNT` | | Element count on page |
+| `SWITCH_FRAME` | `:DEFAULT` | Switch iframe context |
+| `SWITCH_WINDOW` | | Switch browser window/tab |
+
+### API Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `SEND_REQUEST` | | Execute REST call from JSON template |
+| `ASSERT_STATUS` | `:NOT` `:2XX` `:4XX` `:5XX` | HTTP status code assertion |
+| `ASSERT_RESPONSE` | `:CONTAINS` `:NOT_EQUALS` `:NOT_NULL` `:NULL` `:HEADER` | Response body/header assertion |
+| `STORE_DATA` | `:RESPONSE` `:HEADER` `:STATUS` | Extract response value → variable |
+
+### DB Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `DB_QUERY` | `:INLINE` | Execute SQL SELECT |
+| `DB_EXECUTE` | `:INLINE` | Execute SQL INSERT/UPDATE/DELETE |
+| `ASSERT_ROW_COUNT` | `:AT_LEAST` `:AT_MOST` `:ZERO` `:NOT_ZERO` | Row count assertion |
+| `ASSERT_COLUMN` | `:CONTAINS` `:NOT_EQUALS` `:NOT_NULL` `:NULL` | Cell value assertion |
+| `STORE_DATA` | `:DB` `:DB_COUNT` | Extract DB value → variable |
+
+### Core Actions
+
+| Action | Sub-cases | Description |
+|---|---|---|
+| `CHANGE_DATA_STORE` | `:DELETE` | Set or delete a variable |
+| `COMPARE` | `:EQUALS` `:NOT_EQUALS` `:CONTAINS` `:NOT_CONTAINS` `:STARTS_WITH` `:ENDS_WITH` `:GT` `:LT` `:GTE` `:LTE` `:REGEX` | Assert two values |
+| `LOG` | | Write a message to the logs |
+| `INCLUDE` | | Inline another CSV file |
+| `FINALLY` | | Marker — steps below always run |
+
+---
+
+## 17. Quick Reference Card
 
 ### CSV Column Summary
 
