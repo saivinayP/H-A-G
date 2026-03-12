@@ -7,6 +7,7 @@ public final class FrameworkConfigBuilder {
     private String baseUrl                   = "";
     private String apiBaseUrl                = "";
     private String screenshotDirectory       = "target/screenshots";
+    private String screenshotLevel           = "AT_FAILED_STEP";
     private String testDataPath              = "hag-resource/testdata";
     private String templatesPath             = "hag-resource/templates";
     private String sqlScriptsPath            = "hag-resource/scripts";
@@ -16,6 +17,7 @@ public final class FrameworkConfigBuilder {
     public FrameworkConfigBuilder baseUrl(String v)                 { this.baseUrl                   = v; return this; }
     public FrameworkConfigBuilder apiBaseUrl(String v)              { this.apiBaseUrl                = v; return this; }
     public FrameworkConfigBuilder screenshotDirectory(String v)     { this.screenshotDirectory       = v; return this; }
+    public FrameworkConfigBuilder screenshotLevel(String v)         { this.screenshotLevel           = v; return this; }
     public FrameworkConfigBuilder testDataPath(String v)            { this.testDataPath              = v; return this; }
     public FrameworkConfigBuilder templatesPath(String v)           { this.templatesPath             = v; return this; }
     public FrameworkConfigBuilder sqlScriptsPath(String v)          { this.sqlScriptsPath            = v; return this; }
@@ -35,6 +37,7 @@ public final class FrameworkConfigBuilder {
                 baseUrl,
                 apiBaseUrl,
                 screenshotDirectory,
+                screenshotLevel,
                 testDataPath,
                 templatesPath,
                 sqlScriptsPath
