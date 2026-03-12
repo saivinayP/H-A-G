@@ -1,0 +1,10 @@
+Action,Recipient,Source,Key
+LOG,,,Navigating to the-internet login page...
+NAVIGATE,,,/login
+LOG,,,Entering credentials: tomsmith / SuperSecretPassword!
+INPUT,InternetLogin.username,,tomsmith
+INPUT,InternetLogin.password,,SuperSecretPassword!
+CLICK,InternetLogin.loginButton,,
+LOG,,,Verifying successful login message...
+ASSERT_TEXT:contains,InternetLogin.flashMessage,,You logged into a secure area!
+LOG,,,Login successful!
