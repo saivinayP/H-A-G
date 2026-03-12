@@ -87,6 +87,7 @@ public final class ConfigLoader {
                 .defaultWaitTimeoutSeconds(runner.timeoutSeconds())
                 .defaultRetryAttempts(runner.retryAttempts())
                 .screenshotDirectory(runner.screenshotDir())
+                .screenshotLevel(runner.screenshotLevel())
                 .testDataPath(testdata.testDataPath())
                 .templatesPath(testdata.templatesPath())
                 .sqlScriptsPath(testdata.scriptsPath())
@@ -123,7 +124,7 @@ public final class ConfigLoader {
 
     private static RunnerConfig loadRunnerConfig(Path root) {
         Path file = root.resolve("runner.config.yml");
-        if (!Files.exists(file)) return new RunnerConfig("chrome", false, 30, 1, "target/screenshots", "tests");
+        if (!Files.exists(file)) return new RunnerConfig("chrome", false, 30, 1, "target/screenshots", "AT_FAILED_STEP", "tests");
 
         try {
             JsonNode node        = YAML_MAPPER.readTree(file.toFile());
@@ -137,9 +138,10 @@ public final class ConfigLoader {
             int     timeout      = intVal(execution, "timeout-seconds", 30);
             int     retry        = intVal(execution, "retry-attempts",  1);
             String  screenshotDir = text(screenshots, "directory",      "target/screenshots");
+            String  screenshotLvl = text(screenshots, "level",          "AT_FAILED_STEP");
             String  scanRoot      = text(testSuite,   "scan-root",      "tests");
 
-            return new RunnerConfig(browserType, headless, timeout, retry, screenshotDir, scanRoot);
+            return new RunnerConfig(browserType, headless, timeout, retry, screenshotDir, screenshotLvl, scanRoot);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load runner.config.yml: " + e.getMessage(), e);
         }
@@ -262,6 +264,7 @@ public final class ConfigLoader {
             int timeoutSeconds,
             int retryAttempts,
             String screenshotDir,
+            String screenshotLevel,
             String scanRoot
     ) {}
 

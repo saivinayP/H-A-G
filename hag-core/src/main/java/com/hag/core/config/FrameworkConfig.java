@@ -15,6 +15,7 @@ public final class FrameworkConfig {
     private final String baseUrl;             // Browser base URL
     private final String apiBaseUrl;          // REST/SOAP API base URL
     private final String screenshotDirectory;
+    private final String screenshotLevel;
     private final String testDataPath;        // root for test-data JSON files
     private final String templatesPath;       // root for API request templates
     private final String sqlScriptsPath;      // root for .sql files
@@ -25,6 +26,7 @@ public final class FrameworkConfig {
             String baseUrl,
             String apiBaseUrl,
             String screenshotDirectory,
+            String screenshotLevel,
             String testDataPath,
             String templatesPath,
             String sqlScriptsPath
@@ -34,6 +36,7 @@ public final class FrameworkConfig {
         this.baseUrl                   = baseUrl;
         this.apiBaseUrl                = apiBaseUrl;
         this.screenshotDirectory       = screenshotDirectory;
+        this.screenshotLevel           = screenshotLevel;
         this.testDataPath              = testDataPath;
         this.templatesPath             = templatesPath;
         this.sqlScriptsPath            = sqlScriptsPath;
@@ -44,6 +47,7 @@ public final class FrameworkConfig {
     public String getBaseUrl()                   { return baseUrl;                   }
     public String getApiBaseUrl()                { return apiBaseUrl;                }
     public String getScreenshotDirectory()       { return screenshotDirectory;       }
+    public String getScreenshotLevel()           { return screenshotLevel;           }
     public String getTestDataPath()              { return testDataPath;              }
     public String getTemplatesPath()             { return templatesPath;             }
     public String getSqlScriptsPath()            { return sqlScriptsPath;            }

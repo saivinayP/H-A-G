@@ -18,6 +18,7 @@ import com.hag.core.reporting.events.StepFinishedEvent;
 import com.hag.core.reporting.events.StepStartedEvent;
 import com.hag.core.reporting.events.TestFinishedEvent;
 import com.hag.core.reporting.events.TestStartedEvent;
+import com.hag.core.reporting.events.ScreenshotCapturedEvent;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -215,6 +216,15 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             long duration =
                     System.currentTimeMillis() - startTime;
 
+            if (artifactProvider != null && "AT_EVERY_STEP".equalsIgnoreCase(config.getScreenshotLevel())) {
+                try {
+                    Optional<Path> artifact = artifactProvider.capture(testName, stepIndex, context);
+                    artifact.ifPresent(path -> {
+                        eventPublisher.publish(new ScreenshotCapturedEvent(testName, stepIndex, path.toString(), path.toString()));
+                    });
+                } catch (Exception ignored) {}
+            }
+
             eventPublisher.publish(
                     new StepFinishedEvent(
                             testName,
@@ -240,6 +250,9 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                             stepIndex,
                             context
                     );
+                    artifact.ifPresent(path -> {
+                        eventPublisher.publish(new ScreenshotCapturedEvent(testName, stepIndex, path.toString(), path.toString()));
+                    });
                 } catch (Exception ignored) {}
             }
 
@@ -259,8 +272,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                             "FAILED",
                             startTime,
                             duration,
-                            artifact.map(Path::toString)
-                                    .orElse(ex.getMessage())
+                            ex.getMessage()
                     )
             );
 

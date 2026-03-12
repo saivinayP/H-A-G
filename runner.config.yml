@@ -12,6 +12,7 @@ execution:
 
 screenshots:
   directory: target/screenshots
+  level: AT_EVERY_STEP
 
 # ── Bulk Run (BulkTestRunner) ────────────────────────────────────────────
 # scan-root: path relative to project root to scan for CSV test files
