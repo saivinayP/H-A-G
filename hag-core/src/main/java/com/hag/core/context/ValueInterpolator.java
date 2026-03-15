@@ -1,5 +1,6 @@
 package com.hag.core.context;
 
+import com.hag.core.data.DataGenerator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +36,11 @@ public final class ValueInterpolator {
             String token,
             ExecutionContext context
     ) {
+        // Check if token is a data generation function (e.g. RANDOM_EMAIL)
+        if (DataGenerator.isGenerationFunction(token)) {
+            return DataGenerator.generate(token);
+        }
+
         DataScope scope = DataScope.GLOBAL;
         String key = token;
 
