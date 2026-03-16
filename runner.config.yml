@@ -6,6 +6,8 @@ browser:
   headless: false       # set true for CI pipelines
 
 execution:
+  mode: local             # local | remote
+  grid-url: ""            # http://localhost:4444/wd/hub (used when mode is remote)
   thread-count: 2         # parallel test methods
   timeout-seconds: 30     # implicit wait + step timeout
   retry-attempts: 2       # retry on failure (RetryExecutor)
