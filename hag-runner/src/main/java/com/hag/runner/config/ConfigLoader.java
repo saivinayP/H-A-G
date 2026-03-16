@@ -123,8 +123,15 @@ public final class ConfigLoader {
     }
 
     private static RunnerConfig loadRunnerConfig(Path root) {
-        Path file = root.resolve("runner.config.yml");
-        if (!Files.exists(file)) return new RunnerConfig("chrome", false, 30, 1, "target/screenshots", "AT_FAILED_STEP", "tests");
+        String profile = System.getProperty("hag.profile", "config");
+        Path file = root.resolve("runner." + profile + ".yml");
+        if (!Files.exists(file)) {
+            if ("config".equals(profile)) {
+                return new RunnerConfig("chrome", false, "local", "", 30, 1, "target/screenshots", "AT_FAILED_STEP", "tests");
+            } else {
+                throw new RuntimeException("Profile file not found: " + file.toAbsolutePath());
+            }
+        }
 
         try {
             JsonNode node        = YAML_MAPPER.readTree(file.toFile());
@@ -135,15 +142,17 @@ public final class ConfigLoader {
 
             String  browserType  = text(browser, "type",      "chrome");
             boolean headless     = boolVal(browser, "headless", false);
+            String  mode         = text(execution, "mode",      "local");
+            String  gridUrl      = text(execution, "grid-url",  "");
             int     timeout      = intVal(execution, "timeout-seconds", 30);
             int     retry        = intVal(execution, "retry-attempts",  1);
             String  screenshotDir = text(screenshots, "directory",      "target/screenshots");
             String  screenshotLvl = text(screenshots, "level",          "AT_FAILED_STEP");
             String  scanRoot      = text(testSuite,   "scan-root",      "tests");
 
-            return new RunnerConfig(browserType, headless, timeout, retry, screenshotDir, screenshotLvl, scanRoot);
+            return new RunnerConfig(browserType, headless, mode, gridUrl, timeout, retry, screenshotDir, screenshotLvl, scanRoot);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load runner.config.yml: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to load runner." + profile + ".yml: " + e.getMessage(), e);
         }
     }
 
@@ -261,6 +270,8 @@ public final class ConfigLoader {
     public record RunnerConfig(
             String browserType,
             boolean headless,
+            String executionMode,
+            String gridUrl,
             int timeoutSeconds,
             int retryAttempts,
             String screenshotDir,
