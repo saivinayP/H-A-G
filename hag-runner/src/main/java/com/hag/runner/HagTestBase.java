@@ -3,7 +3,7 @@ package com.hag.runner;
 import com.hag.api.adapter.RestAssuredApiAdapter;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.engine.ExecutionEngine;
-import com.hag.db.adapter.JdbcDbAdapter;
+import com.hag.core.db.DbClientRegistry;
 import com.hag.db.bootstrap.DbBootstrap;
 import com.hag.runner.bootstrap.FrameworkBootstrap;
 import com.hag.runner.config.ConfigLoader;
@@ -197,11 +197,13 @@ public abstract class HagTestBase {
         context.setApiAdapter(new RestAssuredApiAdapter(true));
         context.setTestDataResolver(new com.hag.core.resolver.DefaultTestDataResolver());
 
-        // DB-1: wire DB adapter from cached config (close() called in teardown)
+        // DB — build registry from configured profiles
         DbConnectionConfig dbCfg = cachedDbConfig;
         if (dbCfg != null && dbCfg.url() != null && !dbCfg.url().isBlank()) {
-            context.setDbAdapter(DbBootstrap.createAdapter(
-                    dbCfg.url(), dbCfg.username(), dbCfg.password()));
+            DbClientRegistry registry = new DbClientRegistry();
+            registry.register(DbClientRegistry.DEFAULT_NAME,
+                    DbBootstrap.createClient(dbCfg.url(), dbCfg.username(), dbCfg.password()));
+            context.setDbClientRegistry(registry);
         }
 
         threadContext.set(context);
@@ -210,15 +212,14 @@ public abstract class HagTestBase {
     }
 
     /**
-     * Cleans up WebDriver and JDBC connection for this thread.
-     * DB-1 fix: calls {@link JdbcDbAdapter#close()} to prevent connection leaks.
+     * Cleans up WebDriver and JDBC connections for this thread.
      */
     @AfterMethod(alwaysRun = true)
     public void tearDownTest(ITestResult result) {
-        // DB-1: close JDBC connection to prevent leak
+        // Close all DB connections in the registry
         ExecutionContext ctx = threadContext.get();
-        if (ctx != null && ctx.getDbAdapter() instanceof JdbcDbAdapter db) {
-            db.close();
+        if (ctx != null && ctx.getDbClientRegistry() != null) {
+            ctx.getDbClientRegistry().closeAll();
         }
 
         WebDriver driver = threadDriver.get();

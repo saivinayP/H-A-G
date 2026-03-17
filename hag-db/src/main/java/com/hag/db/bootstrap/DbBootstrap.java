@@ -5,14 +5,15 @@ import com.hag.db.action.AssertColumnAction;
 import com.hag.db.action.AssertRowCountAction;
 import com.hag.db.action.DbExecuteAction;
 import com.hag.db.action.DbQueryAction;
+import com.hag.db.action.DbSwitchAction;
 import com.hag.db.action.StoreDataDbAction;
-import com.hag.db.adapter.JdbcDbAdapter;
+import com.hag.db.adapter.JdbcSqlClient;
 
 /**
  * DbBootstrap
  *
  * <p>Registers all JDBC database actions into the {@link ActionRegistry}
- * and provides a factory method to create the {@link JdbcDbAdapter}.
+ * and provides factory methods to create {@link JdbcSqlClient} instances.
  */
 public final class DbBootstrap {
 
@@ -37,17 +38,29 @@ public final class DbBootstrap {
 
         // ── Data extraction ──────────────────────────────────────────────
         registry.register(new StoreDataDbAction());   // STORE_DATA:DB / STORE_DATA:DB_COUNT
+
+        // ── Connection switching (Phase 4) ───────────────────────────────
+        registry.register(new DbSwitchAction());      // DB_SWITCH
     }
 
     /**
-     * Creates a {@link JdbcDbAdapter} from connection parameters.
+     * Creates a {@link JdbcSqlClient} from connection parameters.
      *
      * @param jdbcUrl  JDBC connection URL (e.g. {@code jdbc:mysql://host:3306/db})
      * @param username DB username
      * @param password DB password
-     * @return configured adapter ready to use
+     * @return configured client ready to use
      */
-    public static JdbcDbAdapter createAdapter(String jdbcUrl, String username, String password) {
-        return new JdbcDbAdapter(jdbcUrl, username, password);
+    public static JdbcSqlClient createClient(String jdbcUrl, String username, String password) {
+        return new JdbcSqlClient(jdbcUrl, username, password);
+    }
+
+    /**
+     * @deprecated Use {@link #createClient(String, String, String)} instead.
+     */
+    @Deprecated(since = "1.1", forRemoval = false)
+    public static JdbcSqlClient createAdapter(String jdbcUrl, String username, String password) {
+        return createClient(jdbcUrl, username, password);
     }
 }
+
