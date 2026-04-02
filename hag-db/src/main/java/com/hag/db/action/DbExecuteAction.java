@@ -1,12 +1,13 @@
 package com.hag.db.action;
 
+import com.hag.core.adapter.DbClient;
 import com.hag.core.context.ExecutionContext;
+import com.hag.core.db.DbClientRegistry;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
 import com.hag.core.executor.ActionCategory;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
-import com.hag.db.adapter.JdbcDbAdapter;
 import com.hag.db.sql.SqlLoader;
 
 import java.util.HashMap;
@@ -38,11 +39,13 @@ public final class DbExecuteAction implements Action {
     public ExecutionResult execute(Step step, ActionDescriptor descriptor, ExecutionContext context) {
 
         if (!context.hasDbAdapter()) {
-            return ExecutionResult.failure("DB_EXECUTE requires a DbAdapter in ExecutionContext");
+            return ExecutionResult.failure("DB_EXECUTE requires a DbClient in ExecutionContext");
         }
 
-        if (!(context.getDbAdapter() instanceof JdbcDbAdapter adapter)) {
-            return ExecutionResult.failure("DB_EXECUTE requires JdbcDbAdapter");
+        DbClientRegistry registry = context.getDbClientRegistry();
+        DbClient client = registry != null ? registry.getActive() : null;
+        if (client == null) {
+            return ExecutionResult.failure("DB_EXECUTE — no active DbClient available in registry");
         }
 
         try {
@@ -64,7 +67,7 @@ public final class DbExecuteAction implements Action {
                 sql = SqlLoader.loadAndResolve(scriptPath, sqlRoot, vars);
             }
 
-            int affected = adapter.executeUpdate(sql);
+            int affected = client.executeUpdate(sql);
             return ExecutionResult.success("DB_EXECUTE → " + affected + " row(s) affected");
 
         } catch (Exception ex) {

@@ -22,3 +22,23 @@ screenshots:
 # Override with: mvn test -Dhag.test.root=tests/smoke
 test-suite:
   scan-root: hag-resource/tests/demo-ui/internet_login.csv
+
+# ── Reporting (Phase 3) ──────────────────────────────────────────────────
+reporting:
+
+  # JSON / NDJSON reporter — writes one event per line to a file.
+  # Zero new dependencies (uses existing Jackson).
+  # The file can be tailed live during a test run or ingested by any aggregator.
+  json:
+    enabled: true
+    output-dir: TEST_RESULTS/json
+
+  # Report Portal — enterprise analytics & historical dashboard.
+  # Requires a self-hosted Report Portal server (Docker image: reportportal/reportportal).
+  # Flip enabled: true once the server is running and the api-token is configured.
+  report-portal:
+    enabled: false
+    endpoint: http://localhost:8080
+    api-token: ""               # paste your RP UUID token here
+    project: hag-project
+    launch-name: ""             # defaults to -Dhag.run.name system property

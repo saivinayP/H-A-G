@@ -43,6 +43,16 @@ import java.util.regex.Pattern;
  *   retry-attempts: 1
  * screenshots:
  *   directory: target/screenshots
+ * reporting:
+ *   json:
+ *     enabled: true
+ *     output-dir: TEST_RESULTS/json
+ *   report-portal:
+ *     enabled: false
+ *     endpoint: http://localhost:8080
+ *     api-token: ""
+ *     project: hag-project
+ *     launch-name: ""
  * </pre>
  *
  * <h3>testdata.config.yml</h3>
@@ -263,6 +273,48 @@ public final class ConfigLoader {
         return sb.toString();
     }
 
+    // ── Reporting config ─────────────────────────────────────────────────
+
+    /**
+     * Loads reporting configuration from {@code runner.config.yml}.
+     * Safe to call even when the file has no {@code reporting:} block — all
+     * fields default to disabled / empty.
+     *
+     * @param projectRoot path to the project root
+     */
+    public static ReportingConfig loadReportingConfig(String projectRoot) {
+        return loadReportingConfig(Paths.get(projectRoot).toAbsolutePath());
+    }
+
+    private static ReportingConfig loadReportingConfig(Path root) {
+        String profile = System.getProperty("hag.profile", "config");
+        Path file = root.resolve("runner." + profile + ".yml");
+        if (!Files.exists(file)) return ReportingConfig.disabled();
+
+        try {
+            JsonNode node       = YAML_MAPPER.readTree(file.toFile());
+            JsonNode reporting  = node.path("reporting");
+            JsonNode jsonNode   = reporting.path("json");
+            JsonNode rpNode     = reporting.path("report-portal");
+
+            boolean jsonEnabled  = boolVal(jsonNode,  "enabled",    false);
+            String  jsonOutputDir = text(jsonNode, "output-dir", "TEST_RESULTS/json");
+
+            boolean rpEnabled    = boolVal(rpNode,  "enabled",     false);
+            String  rpEndpoint   = text(rpNode, "endpoint",    "");
+            String  rpToken      = resolveEnv(text(rpNode, "api-token",   ""));
+            String  rpProject    = text(rpNode, "project",     "hag-project");
+            String  rpLaunch     = text(rpNode, "launch-name", "");
+
+            return new ReportingConfig(
+                    new ReportingConfig.JsonConfig(jsonEnabled, jsonOutputDir),
+                    new ReportingConfig.ReportPortalConfig(rpEnabled, rpEndpoint, rpToken, rpProject, rpLaunch)
+            );
+        } catch (IOException e) {
+            return ReportingConfig.disabled();
+        }
+    }
+
     // ── Inner config records ─────────────────────────────────────────────
 
     public record UrlConfig(String applicationUrl, String apiBaseUrl) {}
@@ -287,4 +339,33 @@ public final class ConfigLoader {
     ) {}
 
     public record DbConnectionConfig(String url, String username, String password) {}
+
+    /**
+     * Top-level reporting config, containing JSON and Report Portal sub-configs.
+     *
+     * @param json         JSON (NDJSON) reporter settings
+     * @param reportPortal Report Portal integration settings
+     */
+    public record ReportingConfig(
+            JsonConfig json,
+            ReportPortalConfig reportPortal
+    ) {
+        /** Returns a fully-disabled config (all engines off). */
+        public static ReportingConfig disabled() {
+            return new ReportingConfig(
+                    new JsonConfig(false, "TEST_RESULTS/json"),
+                    new ReportPortalConfig(false, "", "", "hag-project", "")
+            );
+        }
+
+        public record JsonConfig(boolean enabled, String outputDir) {}
+
+        public record ReportPortalConfig(
+                boolean enabled,
+                String endpoint,
+                String apiToken,
+                String project,
+                String launchName
+        ) {}
+    }
 }

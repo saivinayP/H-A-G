@@ -2,10 +2,12 @@ package com.hag.core.context;
 
 import com.hag.core.adapter.ApiAdapter;
 import com.hag.core.adapter.DbAdapter;
+import com.hag.core.adapter.DbClient;
 import com.hag.core.adapter.UiAdapter;
 import com.hag.core.config.FrameworkConfig;
 import com.hag.core.engine.ExecutionEngine;
 import java.nio.file.Path;
+import com.hag.core.db.DbClientRegistry;
 import com.hag.core.resolver.TestDataResolver;
 import com.hag.core.result.ExecutionResult;
 
@@ -45,7 +47,7 @@ public class ExecutionContext {
 
     private UiAdapter uiAdapter;
     private ApiAdapter apiAdapter;
-    private DbAdapter dbAdapter;
+    private DbClientRegistry dbClientRegistry;
     private TestDataResolver testDataResolver;
     private FrameworkConfig config;
     private ExecutionEngine engine;
@@ -154,12 +156,43 @@ public class ExecutionContext {
         this.apiAdapter = apiAdapter;
     }
 
-    public DbAdapter getDbAdapter() {
-        return dbAdapter;
+    public DbClientRegistry getDbClientRegistry() {
+        return dbClientRegistry;
     }
 
-    public void setDbAdapter(DbAdapter dbAdapter) {
-        this.dbAdapter = dbAdapter;
+    public void setDbClientRegistry(DbClientRegistry dbClientRegistry) {
+        this.dbClientRegistry = dbClientRegistry;
+    }
+
+    /**
+     * Convenience accessor — returns the currently active {@link DbClient} from the registry.
+     * Returns {@code null} if no registry or no active client is set.
+     *
+     * @deprecated Use {@link #getDbClientRegistry()} for multi-DB scenarios.
+     */
+    @Deprecated
+    public DbAdapter getDbAdapter() {
+        if (dbClientRegistry == null) return null;
+        return dbClientRegistry.getActive();
+    }
+
+    /**
+     * Convenience setter — wraps {@code adapter} in a {@link DbClientRegistry} under
+     * the name {@code "default"} so existing single-DB wiring continues to work.
+     *
+     * @deprecated Use {@link #setDbClientRegistry(DbClientRegistry)} for multi-DB scenarios.
+     */
+    @Deprecated
+    public void setDbAdapter(DbAdapter adapter) {
+        if (adapter instanceof DbClient client) {
+            DbClientRegistry registry = new DbClientRegistry();
+            registry.register(DbClientRegistry.DEFAULT_NAME, client);
+            this.dbClientRegistry = registry;
+        } else {
+            throw new IllegalArgumentException(
+                "setDbAdapter() only accepts DbClient implementations in Phase 4+. "
+                + "Use JdbcSqlClient instead of JdbcDbAdapter.");
+        }
     }
 
     public TestDataResolver getTestDataResolver() {
@@ -231,6 +264,10 @@ public class ExecutionContext {
     /** @return {@code true} when an ApiAdapter has been registered. */
     public boolean hasApiAdapter() { return apiAdapter != null; }
 
-    /** @return {@code true} when a DbAdapter has been registered. */
-    public boolean hasDbAdapter()  { return dbAdapter  != null; }
-}
+    /** @return {@code true} when a DbClientRegistry with at least one client is registered. */
+    public boolean hasDbAdapter()  {
+        return dbClientRegistry != null
+                && dbClientRegistry.hasClients()
+                && dbClientRegistry.getActive() != null;
+    }
+}

@@ -1,19 +1,22 @@
 package com.hag.db.action;
 
+import com.hag.core.adapter.DbClient;
+import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
+import com.hag.core.db.DbClientRegistry;
+import com.hag.core.db.DbQueryResult;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
 import com.hag.core.executor.ActionCategory;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
-import com.hag.db.adapter.JdbcDbAdapter;
 import com.hag.db.sql.SqlLoader;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * DB_QUERY action — runs a SQL SELECT and stores the result in the adapter.
+ * DB_QUERY action — runs a SQL SELECT and stores the result in the registry's active client.
  *
  * <h3>CSV Syntax</h3>
  * <pre>
@@ -26,7 +29,7 @@ import java.util.Map;
  *   <li>{@code DB_QUERY:INLINE} — SQL written directly in the Key column</li>
  * </ul>
  *
- * After execution, assertion and store actions read from {@link JdbcDbAdapter#getLastQueryResult()}.
+ * After execution, assertion and store actions read from DataStore key {@link #LAST_RESULT_KEY}.
  */
 public final class DbQueryAction implements Action {
 
@@ -43,11 +46,13 @@ public final class DbQueryAction implements Action {
     public ExecutionResult execute(Step step, ActionDescriptor descriptor, ExecutionContext context) {
 
         if (!context.hasDbAdapter()) {
-            return ExecutionResult.failure("DB_QUERY requires a DbAdapter in ExecutionContext");
+            return ExecutionResult.failure("DB_QUERY requires a DbClient in ExecutionContext");
         }
 
-        if (!(context.getDbAdapter() instanceof JdbcDbAdapter adapter)) {
-            return ExecutionResult.failure("DB_QUERY requires JdbcDbAdapter");
+        DbClientRegistry registry = context.getDbClientRegistry();
+        DbClient client = registry != null ? registry.getActive() : null;
+        if (client == null) {
+            return ExecutionResult.failure("DB_QUERY — no active DbClient available in registry");
         }
 
         try {
@@ -69,15 +74,12 @@ public final class DbQueryAction implements Action {
                 sql = SqlLoader.loadAndResolve(scriptPath, sqlRoot, vars);
             }
 
-            adapter.executeQuery(sql);   // result cached in adapter.getLastQueryResult()
+            client.executeQuery(sql);   // result cached in client.getLastQueryResult()
 
             // Also store in DataStore for cross-action access
             context.getDataStore().put(LAST_RESULT_KEY, adapter.getLastQueryResult());
 
-            int rowCount = adapter.getLastQueryResult() != null
-                    ? adapter.getLastQueryResult().rowCount() : 0;
-
-            return ExecutionResult.success("DB_QUERY → " + rowCount + " row(s) returned");
+            return ExecutionResult.success("DB_QUERY → " + result.rowCount() + " row(s) returned");
 
         } catch (Exception ex) {
             return ExecutionResult.failure("DB_QUERY failed: " + ex.getMessage());

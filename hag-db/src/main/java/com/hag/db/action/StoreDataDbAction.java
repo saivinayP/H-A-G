@@ -6,7 +6,7 @@ import com.hag.core.executor.Action;
 import com.hag.core.executor.ActionCategory;
 import com.hag.core.model.Step;
 import com.hag.core.result.ExecutionResult;
-import com.hag.db.model.DbQueryResult;
+import com.hag.core.db.DbQueryResult;
 
 /**
  * STORE_DATA:DB — extracts a cell value from the last DB_QUERY result

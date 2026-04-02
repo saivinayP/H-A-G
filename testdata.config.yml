@@ -9,10 +9,27 @@ paths:
   api-templates:  hag-resource/templates        # API request template JSON files
   sql-scripts:    hag-resource/scripts          # SQL script files
 
-# ── Database (optional) ───────────────────────────────────────────────────────
+# ── Database (optional — single default connection) ───────────────────────────
 # Remove or leave url blank to run without DB validation.
 # Use ${env.VAR} to read from environment variables (recommended for credentials).
 database:
   url:      "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
   username: "sa"
   password: ""
+
+# ── Named DB Profiles (Phase 4 — multi-DB routing) ───────────────────────────
+# Define multiple named database connections here.
+# Switch between them mid-test with: DB_SWITCH,,,profile_name
+# Leave this section empty (or omit it) to use only the single 'database:' above.
+#
+# Example:
+# databases:
+#   orders_db:
+#     url:      jdbc:mysql://localhost:3306/orders
+#     username: ${env.ORDERS_DB_USER}
+#     password: ${env.ORDERS_DB_PASS}
+#   auth_db:
+#     url:      jdbc:mysql://localhost:3306/auth
+#     username: ${env.AUTH_DB_USER}
+#     password: ${env.AUTH_DB_PASS}
+
