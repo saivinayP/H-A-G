@@ -1,6 +1,5 @@
 package com.hag.db.action;
 
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
@@ -57,7 +56,7 @@ public final class StoreDataDbAction implements Action {
 
         if (subCase.equals("DB_COUNT")) {
             String countStr = String.valueOf(result.rowCount());
-            context.getDataStore().put(DataScope.DB, variableName, countStr);
+            context.getDataStore().put(variableName, countStr);
             return ExecutionResult.success("Stored [" + variableName + "] = " + countStr);
         }
 
@@ -79,13 +78,13 @@ public final class StoreDataDbAction implements Action {
         Object rawValue = result.getValue(rowIndex, column);
         String value    = rawValue == null ? null : rawValue.toString();
 
-        context.getDataStore().put(DataScope.DB, variableName, value);
+        context.getDataStore().put(variableName, value);
         return ExecutionResult.success("Stored [" + variableName + "] = " + value);
     }
 
     private DbQueryResult getLastResult(ExecutionContext context) {
         return context.getDataStore()
-                .get(DataScope.GLOBAL, DbQueryAction.LAST_RESULT_KEY)
+                .get(DbQueryAction.LAST_RESULT_KEY)
                 .filter(v -> v instanceof DbQueryResult)
                 .map(v -> (DbQueryResult) v)
                 .orElse(null);

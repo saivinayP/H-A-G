@@ -3,6 +3,7 @@ package com.hag.core.engine;
 import com.hag.core.context.ExecutionContext;
 
 import java.nio.file.Path;
+import com.hag.core.result.ExecutionResult;
 
 /**
  * Contract for executing a test definition.
@@ -17,6 +18,12 @@ public interface ExecutionEngine {
     void execute(
             String testName,
             Path testFile,
+            ExecutionContext context
+    );
+
+    ExecutionResult runSubscript(
+            String testName,
+            String subscriptPath,
             ExecutionContext context
     );
 }

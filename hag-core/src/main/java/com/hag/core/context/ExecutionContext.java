@@ -5,10 +5,14 @@ import com.hag.core.adapter.DbAdapter;
 import com.hag.core.adapter.DbClient;
 import com.hag.core.adapter.UiAdapter;
 import com.hag.core.config.FrameworkConfig;
+import com.hag.core.engine.ExecutionEngine;
+import java.nio.file.Path;
 import com.hag.core.db.DbClientRegistry;
 import com.hag.core.resolver.TestDataResolver;
 import com.hag.core.result.ExecutionResult;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -38,11 +42,16 @@ public class ExecutionContext {
 
     private ExecutionResult lastResult;
 
+    private boolean skipNextStep = false;
+    private final List<String> softFailures = new ArrayList<>();
+
     private UiAdapter uiAdapter;
     private ApiAdapter apiAdapter;
     private DbClientRegistry dbClientRegistry;
     private TestDataResolver testDataResolver;
     private FrameworkConfig config;
+    private ExecutionEngine engine;
+    private Path testFile;
 
     /* ==========================================================
        Placeholder Resolution
@@ -95,6 +104,8 @@ public class ExecutionContext {
         currentStepIndex.set(0);
         dataStore.clear();
         lastResult = null;
+        skipNextStep = false;
+        softFailures.clear();
     }
 
     /* ==========================================================
@@ -107,6 +118,22 @@ public class ExecutionContext {
 
     public ExecutionResult getLastResult() {
         return lastResult;
+    }
+
+    public boolean isSkipNextStep() {
+        return skipNextStep;
+    }
+
+    public void setSkipNextStep(boolean skipNextStep) {
+        this.skipNextStep = skipNextStep;
+    }
+
+    public void addSoftFailure(String failureMessage) {
+        softFailures.add(failureMessage);
+    }
+
+    public List<String> getSoftFailures() {
+        return softFailures;
     }
 
     /* ==========================================================
@@ -186,6 +213,22 @@ public class ExecutionContext {
         this.config = config;
     }
 
+    public ExecutionEngine getEngine() {
+        return engine;
+    }
+
+    public void setEngine(ExecutionEngine engine) {
+        this.engine = engine;
+    }
+
+    public Path getTestFile() {
+        return testFile;
+    }
+
+    public void setTestFile(Path testFile) {
+        this.testFile = testFile;
+    }
+
     /* ==========================================================
        Runtime Validation
        ========================================================== */
@@ -227,4 +270,4 @@ public class ExecutionContext {
                 && dbClientRegistry.hasClients()
                 && dbClientRegistry.getActive() != null;
     }
-}
+}

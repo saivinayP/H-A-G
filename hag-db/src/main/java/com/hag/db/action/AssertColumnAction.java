@@ -1,6 +1,5 @@
 package com.hag.db.action;
 
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
@@ -106,7 +105,7 @@ public final class AssertColumnAction implements Action {
 
     private DbQueryResult getLastResult(ExecutionContext context) {
         return context.getDataStore()
-                .get(DataScope.GLOBAL, DbQueryAction.LAST_RESULT_KEY)
+                .get(DbQueryAction.LAST_RESULT_KEY)
                 .filter(v -> v instanceof DbQueryResult)
                 .map(v -> (DbQueryResult) v)
                 .orElse(null);

@@ -5,12 +5,14 @@ import com.hag.core.context.ExecutionContext;
 import com.hag.core.model.Step;
 import com.hag.core.resolver.StepResolver;
 import com.hag.core.dispatcher.ActionDispatcher;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
+import com.hag.core.dispatcher.descriptor.ActionDescriptorParser;
+import com.hag.core.dispatcher.descriptor.StepOptions;
+import com.hag.core.engine.FailureArtifactProvider;
 import com.hag.core.parser.CsvTestParser;
 import com.hag.core.parser.IncludeResolver;
 import com.hag.core.result.ExecutionResult;
 import com.hag.core.reporting.engine.EventPublisher;
-import com.hag.core.reporting.events.Event;
-import com.hag.core.reporting.events.EventType;
 import com.hag.core.reporting.events.FinallyFinishedEvent;
 import com.hag.core.reporting.events.FinallyStartedEvent;
 import com.hag.core.reporting.events.StepFailedEvent;
@@ -77,6 +79,8 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             // GAP-1: always inject the engine's config before validation
             context.setConfig(config);
+            context.setEngine(this);
+            context.setTestFile(testFile);
             context.validateConfiguration();
 
             long testStartTime = System.currentTimeMillis();
@@ -123,7 +127,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             String testName,
             Path testFile
     ) {
-        List<Step> parsed = parser.parse(testFile);
+        List<Step> parsed = parser.parseSteps(testFile);
         return expandIncludes(testName, parsed, testFile.getParent());
     }
 
@@ -168,6 +172,29 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         }
     }
 
+    @Override
+    public ExecutionResult runSubscript(String testName, String subscriptPath, ExecutionContext context) {
+        Path baseDir = context.getTestFile() != null ? context.getTestFile().getParent() : java.nio.file.Paths.get("");
+        Path absPath = baseDir.resolve(subscriptPath).normalize();
+        
+        if (!java.nio.file.Files.exists(absPath)) {
+            return ExecutionResult.failure("Subscript not found: " + absPath);
+        }
+
+        try {
+            List<Step> subscriptSteps = parseAndPrepareSteps(testName, absPath);
+            StepFlowSplitter.Flow flow = StepFlowSplitter.split(subscriptSteps);
+            try {
+                runMainSteps(testName, flow.main(), context);
+            } finally {
+                runFinallySteps(testName, flow.fin(), context);
+            }
+            return ExecutionResult.success();
+        } catch (Exception ex) {
+            return ExecutionResult.failure("Subscript failure: " + ex.getMessage());
+        }
+    }
+
     private void executeSingleStep(
             String testName,
             Step step,
@@ -184,9 +211,18 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                         step.getAction(),
                         null,
                         "CORE",
-                        step.getRecipient()
+                        step.getRecipient(),
+                        step.getKey()
                 )
         );
+
+        if (context.isSkipNextStep()) {
+            context.setSkipNextStep(false);
+            eventPublisher.publish(new StepFinishedEvent(
+                    testName, stepIndex, "SKIPPED", startTime, 0, "Conditional skip bypass"
+            ));
+            return;
+        }
 
         try {
 
@@ -206,7 +242,20 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             context.setLastResult(result);
 
+            ActionDescriptor descriptor = ActionDescriptorParser.parse(step.getAction());
+            StepOptions options = descriptor.stepOptions();
+
             if (result.isFailure()) {
+                if (options.isWarnOnFail() || options.isContinueOnFail()) {
+                    String msg = result.getMessage();
+                    context.getSoftFailures().add("Step " + stepIndex + " [" + step.getAction() + "] failed: " + msg);
+                    
+                    long duration = System.currentTimeMillis() - startTime;
+                    eventPublisher.publish(
+                            new StepFinishedEvent(testName, stepIndex, "WARN", startTime, duration, msg)
+                    );
+                    return;
+                }
                 throw new StepExecutionException(
                         "Step " + stepIndex + " [" + step.getAction() + "]: "
                                 + result.getMessage()
@@ -264,6 +313,21 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                             ex.getMessage()
                     )
             );
+
+            StepOptions options;
+            try {
+                options = ActionDescriptorParser.parse(step.getAction()).stepOptions();
+            } catch (Exception parseEx) {
+                options = StepOptions.defaults();
+            }
+
+            if (options.isWarnOnFail() || options.isContinueOnFail()) {
+                context.getSoftFailures().add("Step " + stepIndex + " [" + step.getAction() + "] failed: " + ex.getMessage());
+                eventPublisher.publish(
+                        new StepFinishedEvent(testName, stepIndex, "WARN", startTime, duration, ex.getMessage())
+                );
+                return;
+            }
 
             eventPublisher.publish(
                     new StepFinishedEvent(

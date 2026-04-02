@@ -76,9 +76,8 @@ public final class DbQueryAction implements Action {
 
             client.executeQuery(sql);   // result cached in client.getLastQueryResult()
 
-            // Also store in DataStore for cross-action access by assert/store actions
-            DbQueryResult result = client.getLastQueryResult();
-            context.getDataStore().put(DataScope.GLOBAL, LAST_RESULT_KEY, result);
+            // Also store in DataStore for cross-action access
+            context.getDataStore().put(LAST_RESULT_KEY, adapter.getLastQueryResult());
 
             return ExecutionResult.success("DB_QUERY → " + result.rowCount() + " row(s) returned");
 
@@ -89,7 +88,7 @@ public final class DbQueryAction implements Action {
 
     private Map<String, Object> buildVarMap(ExecutionContext context) {
         Map<String, Object> vars = new HashMap<>();
-        context.getDataStore().snapshot().forEach((k, v) -> vars.put(k.getKey(), v));
+        context.getDataStore().snapshot().forEach(vars::put);
         return vars;
     }
 
