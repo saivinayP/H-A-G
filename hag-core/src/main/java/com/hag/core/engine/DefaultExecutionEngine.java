@@ -5,6 +5,10 @@ import com.hag.core.context.ExecutionContext;
 import com.hag.core.model.Step;
 import com.hag.core.resolver.StepResolver;
 import com.hag.core.dispatcher.ActionDispatcher;
+import com.hag.core.dispatcher.descriptor.ActionDescriptor;
+import com.hag.core.dispatcher.descriptor.ActionDescriptorParser;
+import com.hag.core.dispatcher.descriptor.StepOptions;
+import com.hag.core.engine.FailureArtifactProvider;
 import com.hag.core.parser.CsvTestParser;
 import com.hag.core.parser.IncludeResolver;
 import com.hag.core.result.ExecutionResult;
@@ -204,7 +208,8 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                         step.getAction(),
                         null,
                         "CORE",
-                        step.getRecipient()
+                        step.getRecipient(),
+                        step.getKey()
                 )
         );
 
@@ -234,7 +239,20 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             context.setLastResult(result);
 
+            ActionDescriptor descriptor = ActionDescriptorParser.parse(step.getAction());
+            StepOptions options = descriptor.stepOptions();
+
             if (result.isFailure()) {
+                if (options.isWarnOnFail() || options.isContinueOnFail()) {
+                    String msg = result.getMessage();
+                    context.getSoftFailures().add("Step " + stepIndex + " [" + step.getAction() + "] failed: " + msg);
+                    
+                    long duration = System.currentTimeMillis() - startTime;
+                    eventPublisher.publish(
+                            new StepFinishedEvent(testName, stepIndex, "WARN", startTime, duration, msg)
+                    );
+                    return;
+                }
                 throw new StepExecutionException(
                         "Step " + stepIndex + " [" + step.getAction() + "]: "
                                 + result.getMessage()
@@ -292,6 +310,21 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                             ex.getMessage()
                     )
             );
+
+            StepOptions options;
+            try {
+                options = ActionDescriptorParser.parse(step.getAction()).stepOptions();
+            } catch (Exception parseEx) {
+                options = StepOptions.defaults();
+            }
+
+            if (options.isWarnOnFail() || options.isContinueOnFail()) {
+                context.getSoftFailures().add("Step " + stepIndex + " [" + step.getAction() + "] failed: " + ex.getMessage());
+                eventPublisher.publish(
+                        new StepFinishedEvent(testName, stepIndex, "WARN", startTime, duration, ex.getMessage())
+                );
+                return;
+            }
 
             eventPublisher.publish(
                     new StepFinishedEvent(

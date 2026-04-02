@@ -69,8 +69,25 @@ public class HtmlReportEngine implements ReportEngine {
         } else if (event instanceof StepStartedEvent e) {
             StepNode step = new StepNode();
             step.stepIndex = e.getStepIndex();
-            step.actionName = e.getAction(); // e.getAction() instead of getActionName()
-            step.startTime = e.getTimestamp(); // e.getTimestamp() inherited from Event
+            
+            String baseAction = e.getAction();
+            if (baseAction != null && baseAction.contains("|")) {
+                baseAction = baseAction.substring(0, baseAction.indexOf('|'));
+            }
+            if (baseAction != null && baseAction.contains(":")) {
+                baseAction = baseAction.substring(0, baseAction.indexOf(':'));
+            }
+
+            if ("LOG".equalsIgnoreCase(baseAction)) {
+                step.actionName = e.getKey() != null ? e.getKey() : "LOG";
+            } else if ("SECTION".equalsIgnoreCase(baseAction)) {
+                step.actionName = e.getKey() != null ? e.getKey() : "SECTION";
+                step.isSection = true;
+            } else {
+                step.actionName = e.getAction();
+            }
+
+            step.startTime = e.getTimestamp();
             scenario.steps.put(e.getStepIndex(), step);
         } else if (event instanceof StepFinishedEvent e) {
             StepNode step = scenario.steps.get(e.getStepIndex());
@@ -267,6 +284,13 @@ public class HtmlReportEngine implements ReportEngine {
     }
 
     private void renderStep(StringBuilder html, StepNode step) {
+        if (step.isSection) {
+            html.append("                    <div class=\"step-row\" style=\"border-bottom: 2px solid #ccc; background-color: #f8f9fa; border-left: 5px solid #6c757d; font-weight: bold; font-size: 1.1em;\">\n");
+            html.append("                        <div class=\"step-info\">").append(step.actionName != null ? step.actionName : "SECTION").append("</div>\n");
+            html.append("                    </div>\n");
+            return;
+        }
+
         String status = step.status != null ? step.status : "IGNORED";
         String rowClass = "status-" + status;
 
@@ -324,5 +348,6 @@ public class HtmlReportEngine implements ReportEngine {
         String errorMessage;
         String failureType;
         String screenshotPath;
+        boolean isSection = false;
     }
 }

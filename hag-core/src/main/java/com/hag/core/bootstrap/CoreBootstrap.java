@@ -8,6 +8,8 @@ import com.hag.core.executor.control.ExecuteIfAction;
 import com.hag.core.executor.control.ExecuteEachAction;
 import com.hag.core.executor.control.RepeatAction;
 import com.hag.core.executor.control.SkipIfAction;
+import com.hag.core.executor.utility.AssertNoFailuresAction;
+import com.hag.core.executor.utility.SectionAction;
 
 /**
  * CoreBootstrap — registers framework-level (layer-agnostic) actions.
@@ -38,6 +40,8 @@ public final class CoreBootstrap {
 
         // Utilities
         registry.register(new LogAction());
+        registry.register(new AssertNoFailuresAction());
+        registry.register(new SectionAction());
 
         // Control Flow
         registry.register(new ExecuteIfAction());
