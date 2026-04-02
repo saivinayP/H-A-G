@@ -11,10 +11,11 @@ import java.util.Set;
  * from the Action CSV column value:
  *
  * <pre>
- *   CLICK            → name=CLICK,  subCase=null
- *   CLICK:DOUBLE     → name=CLICK,  subCase=DOUBLE
- *   WAIT:TEXT        → name=WAIT,   subCase=TEXT
- *   STORE_DATA:DB    → name=STORE_DATA, subCase=DB
+ *   CLICK                    → name=CLICK,  subCase=null
+ *   CLICK:DOUBLE             → name=CLICK,  subCase=DOUBLE
+ *   WAIT:TEXT                → name=WAIT,   subCase=TEXT
+ *   INPUT|masked=true        → name=INPUT,  stepOptions={masked=true}
+ *   ASSERT_STATUS|retry=5   → name=ASSERT_STATUS, stepOptions={retry=5}
  * </pre>
  *
  * <p>Modifier flags and key=value parameters — parsed from the Source column
@@ -28,17 +29,34 @@ public final class ActionDescriptor {
     private final String              subCase;
     private final Set<String>         flags;
     private final Map<String, String> parameters;
+    private final StepOptions         stepOptions;
 
+    /** Full constructor — used by {@link ActionDescriptorParser#parse(String)}. */
     public ActionDescriptor(
             String              name,
-            String              subCase,          // may be null
+            String              subCase,
+            Set<String>         flags,
+            Map<String, String> parameters,
+            StepOptions         stepOptions
+    ) {
+        this.name        = name;
+        this.subCase     = subCase;
+        this.flags       = flags      != null ? flags      : Collections.emptySet();
+        this.parameters  = parameters != null ? parameters : Collections.emptyMap();
+        this.stepOptions = stepOptions != null ? stepOptions : StepOptions.defaults();
+    }
+
+    /**
+     * Compatibility overload used by call sites that don't yet pass options.
+     * Defaults to {@link StepOptions#defaults()}.
+     */
+    public ActionDescriptor(
+            String              name,
+            String              subCase,
             Set<String>         flags,
             Map<String, String> parameters
     ) {
-        this.name       = name;
-        this.subCase    = subCase;
-        this.flags      = flags      != null ? flags      : Collections.emptySet();
-        this.parameters = parameters != null ? parameters : Collections.emptyMap();
+        this(name, subCase, flags, parameters, StepOptions.defaults());
     }
 
     // ------------------------------------------------------------------ name
@@ -97,6 +115,17 @@ public final class ActionDescriptor {
 
     public Map<String, String> parameters() {
         return Collections.unmodifiableMap(parameters);
+    }
+
+    // ---------------------------------------------------------- step options
+
+    /**
+     * Per-step execution options parsed from the Action column pipe-suffix.
+     * Never {@code null} — returns {@link StepOptions#defaults()} when no
+     * options were specified.
+     */
+    public StepOptions stepOptions() {
+        return stepOptions;
     }
 
     @Override

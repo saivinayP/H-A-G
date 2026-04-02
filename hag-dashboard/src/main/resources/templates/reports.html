@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Reports — HAG Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <script th:src="@{/js/theme-toggle.js}"></script>
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">⚡ H-A-G</div>
+        <a href="/">📊 Dashboard</a>
+        <a href="/run">▶️ Run Tests</a>
+        <a href="/reports" class="active">📋 Reports</a>
+        <div class="spacer"></div>
+        <div class="bottom-links">
+            <a href="/settings">⚙️ Settings</a>
+            <a href="/logout">🚪 Logout</a>
+            <div style="padding:10px 14px;">
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Reports</h1>
+            <p>Browse and analyze test execution reports.</p>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-bar">
+            <a href="/reports" class="filter-btn" th:classappend="${activeFilter == 'ALL' ? 'active' : ''}">All</a>
+            <a href="/reports?status=PASSED" class="filter-btn" th:classappend="${activeFilter == 'PASSED' ? 'active' : ''}">✅ Passed</a>
+            <a href="/reports?status=FAILED" class="filter-btn" th:classappend="${activeFilter == 'FAILED' ? 'active' : ''}">❌ Failed</a>
+            <a href="/reports?status=ERROR"  class="filter-btn" th:classappend="${activeFilter == 'ERROR' ? 'active' : ''}">⚠️ Error</a>
+        </div>
+
+        <div class="card">
+            <div th:if="${#lists.isEmpty(runs)}" class="alert alert-info">
+                No runs found matching this filter.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(runs)}">
+                <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Suite</th>
+                    <th>Browser</th>
+                    <th>Env</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Finished</th>
+                    <th>Report</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="run : ${runs}">
+                    <td><a th:href="@{'/run/' + ${run.runId}}"><code th:text="${run.runId}"></code></a></td>
+                    <td th:text="${run.suite}"></td>
+                    <td th:text="${run.browser}" style="text-transform:capitalize;"></td>
+                    <td th:text="${run.environment}"></td>
+                    <td th:text="${run.mode}" style="text-transform:uppercase;"></td>
+                    <td>
+                        <span th:class="${'badge ' +
+                            (run.status == 'PASSED' ? 'badge-pass' :
+                             run.status == 'FAILED' ? 'badge-fail' :
+                             run.status == 'ERROR'  ? 'badge-error' : 'badge-running')}"
+                              th:text="${run.status}"></span>
+                    </td>
+                    <td th:text="${run.startedAt != null ? #temporals.format(run.startedAt, 'MMM dd, HH:mm') : '—'}"></td>
+                    <td th:text="${run.finishedAt != null ? #temporals.format(run.finishedAt, 'MMM dd, HH:mm') : '—'}"></td>
+                    <td>
+                        <a th:if="${run.reportPath != null}"
+                           th:href="@{'/reports/' + ${run.runId} + '/view'}"
+                           class="btn btn-sm btn-success" target="_blank">
+                            View
+                        </a>
+                        <span th:unless="${run.reportPath != null}" style="color:var(--text-muted);">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

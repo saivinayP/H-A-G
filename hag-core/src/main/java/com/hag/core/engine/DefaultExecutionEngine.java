@@ -123,7 +123,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             String testName,
             Path testFile
     ) {
-        List<Step> parsed = parser.parse(testFile);
+        List<Step> parsed = parser.parseSteps(testFile);
         return expandIncludes(testName, parsed, testFile.getParent());
     }
 

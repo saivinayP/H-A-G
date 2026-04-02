@@ -82,3 +82,11 @@ hag-runner/TEST_RESULTS/
 # class files
 # ==========================
 *.class
+
+# =========================
+# H2 Database files
+# =========================
+data/
+*.db
+*.mv.db
+*.trace.db

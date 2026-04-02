@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Run Tests — HAG Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <script th:src="@{/js/theme-toggle.js}"></script>
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">⚡ H-A-G</div>
+        <a href="/">📊 Dashboard</a>
+        <a href="/run" class="active">▶️ Run Tests</a>
+        <a href="/reports">📋 Reports</a>
+        <div class="spacer"></div>
+        <div class="bottom-links">
+            <a href="/settings">⚙️ Settings</a>
+            <a href="/logout">🚪 Logout</a>
+            <div style="padding:10px 14px;">
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Run Tests</h1>
+            <p>Select a test suite or individual test and configure execution.</p>
+        </div>
+
+        <form action="/api/run" method="post">
+            <div class="split-grid">
+
+                <!-- Left: Test Tree -->
+                <div class="card">
+                    <h3 style="margin-bottom:12px; font-size:0.95rem;">📁 Test Selection</h3>
+                    <div class="test-tree" id="testTree">
+
+                        <!-- Inline tree rendering via JavaScript -->
+                        <script th:inline="javascript">
+                            const testTree = /*[[${testTree}]]*/ [];
+
+                            function renderTree(nodes, container, depth) {
+                                nodes.forEach(node => {
+                                    const div = document.createElement('div');
+
+                                    const item = document.createElement('div');
+                                    item.className = 'tree-item';
+                                    item.style.paddingLeft = (depth * 20 + 10) + 'px';
+                                    item.dataset.path = node.path;
+
+                                    if (node.type === 'directory') {
+                                        item.innerHTML = '📁 ' + node.name;
+                                        item.addEventListener('click', () => {
+                                            const children = div.querySelector('.tree-children');
+                                            if (children) children.style.display = children.style.display === 'none' ? 'block' : 'none';
+                                            selectPath(node.path);
+                                        });
+                                    } else {
+                                        item.innerHTML = '📄 ' + node.name;
+                                        item.addEventListener('click', () => selectPath(node.path));
+                                    }
+
+                                    div.appendChild(item);
+
+                                    if (node.children && node.children.length > 0) {
+                                        const childContainer = document.createElement('div');
+                                        childContainer.className = 'tree-children';
+                                        renderTree(node.children, childContainer, depth + 1);
+                                        div.appendChild(childContainer);
+                                    }
+
+                                    container.appendChild(div);
+                                });
+                            }
+
+                            function selectPath(path) {
+                                document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+                                document.querySelectorAll('.tree-item').forEach(el => {
+                                    if (el.dataset.path === path) el.classList.add('selected');
+                                });
+                                document.getElementById('suiteInput').value = path;
+                                document.getElementById('selectedTarget').textContent = path;
+                            }
+
+                            document.addEventListener('DOMContentLoaded', () => {
+                                const container = document.getElementById('testTree');
+                                container.innerHTML = '';
+                                renderTree(testTree, container, 0);
+
+                                if (testTree.length === 0) {
+                                    container.innerHTML = '<div class="alert alert-info">No tests found in hag-resource/tests</div>';
+                                }
+                            });
+                        </script>
+                    </div>
+                    <div style="margin-top:12px; padding:10px; background:var(--bg); border-radius:8px;">
+                        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Target:</span>
+                        <span id="selectedTarget" style="font-size:0.88rem; font-family:monospace;">Nothing selected</span>
+                    </div>
+                    <input type="hidden" name="suite" id="suiteInput" value=""/>
+                </div>
+
+                <!-- Right: Config Panel -->
+                <div class="card">
+                    <h3 style="margin-bottom:16px; font-size:0.95rem;">⚙️ Execution Config</h3>
+
+                    <div class="form-group">
+                        <label>Execution Mode</label>
+                        <div class="toggle-group" id="modeGroup">
+                            <div class="toggle-btn active" data-value="local" onclick="setToggle('modeGroup','mode',this)">LOCAL</div>
+                            <div class="toggle-btn" data-value="grid" onclick="setToggle('modeGroup','mode',this)">GRID</div>
+                        </div>
+                        <input type="hidden" name="mode" id="mode" th:value="${defaults['mode']}"/>
+                    </div>
+
+                    <div class="form-group" id="gridUrlGroup" style="display:none;">
+                        <label>Grid URL</label>
+                        <input type="text" name="gridUrl" id="gridUrl" th:value="${defaults['gridUrl']}"
+                               placeholder="http://localhost:4444/wd/hub"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Browser</label>
+                        <div class="toggle-group" id="browserGroup">
+                            <div class="toggle-btn active" data-value="chrome" onclick="setToggle('browserGroup','browser',this)">CHROME</div>
+                            <div class="toggle-btn" data-value="firefox" onclick="setToggle('browserGroup','browser',this)">FIREFOX</div>
+                            <div class="toggle-btn" data-value="edge" onclick="setToggle('browserGroup','browser',this)">EDGE</div>
+                        </div>
+                        <input type="hidden" name="browser" id="browser" th:value="${defaults['browser']}"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Headless</label>
+                        <div class="toggle-group" id="headlessGroup">
+                            <div class="toggle-btn" data-value="true" onclick="setToggle('headlessGroup','headless',this)">TRUE</div>
+                            <div class="toggle-btn active" data-value="false" onclick="setToggle('headlessGroup','headless',this)">FALSE</div>
+                        </div>
+                        <input type="hidden" name="headless" id="headless" th:value="${defaults['headless']}"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thread Count</label>
+                        <input type="number" name="threadCount" min="1" max="5" th:value="${defaults['threadCount']}"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Screenshot Level</label>
+                        <select name="screenshotLevel">
+                            <option value="AT_EVERY_STEP" th:selected="${defaults['screenshotLevel'] == 'AT_EVERY_STEP'}">AT_EVERY_STEP</option>
+                            <option value="AT_FAILED_STEP" th:selected="${defaults['screenshotLevel'] == 'AT_FAILED_STEP'}">AT_FAILED_STEP</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Environment</label>
+                        <select name="environment">
+                            <option th:each="env : ${environments}" th:value="${env}" th:text="${env}"></option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;" id="runBtn">
+                        ▶ Run Tests
+                    </button>
+                </div>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script>
+    function setToggle(groupId, inputId, el) {
+        document.querySelectorAll('#' + groupId + ' .toggle-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById(inputId).value = el.dataset.value;
+
+        // Show/hide grid URL
+        if (inputId === 'mode') {
+            document.getElementById('gridUrlGroup').style.display =
+                el.dataset.value === 'grid' ? 'block' : 'none';
+        }
+    }
+
+    // Prevent submit without suite
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', (e) => {
+            if (!document.getElementById('suiteInput').value) {
+                e.preventDefault();
+                alert('Please select a test suite or test case first.');
+            }
+        });
+    });
+</script>
+</body>
+</html>

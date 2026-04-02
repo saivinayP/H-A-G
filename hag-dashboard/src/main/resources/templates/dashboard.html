@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard — HAG</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <script th:src="@{/js/theme-toggle.js}"></script>
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">⚡ H-A-G</div>
+        <a href="/" class="active">📊 Dashboard</a>
+        <a href="/run">▶️ Run Tests</a>
+        <a href="/reports">📋 Reports</a>
+        <div class="spacer"></div>
+        <div class="bottom-links">
+            <a href="/settings">⚙️ Settings</a>
+            <a href="/logout">🚪 Logout</a>
+            <div style="padding:10px 14px;">
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Dashboard</h1>
+            <p>Overview of test execution activity</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-value" th:text="${totalRuns}">0</div>
+                <div class="stat-label">Total Runs</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-value" th:text="${passedRuns}">0</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-value" th:text="${failedRuns}">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-value" th:text="${passRate} + '%'">0%</div>
+                <div class="stat-label">Pass Rate</div>
+            </div>
+        </div>
+
+        <!-- Recent Runs -->
+        <div class="card">
+            <h2 style="margin-bottom:16px; font-size:1.1rem;">Recent Runs</h2>
+
+            <div th:if="${#lists.isEmpty(recentRuns)}" class="alert alert-info">
+                No test runs yet. <a href="/run">Run your first test →</a>
+            </div>
+
+            <table th:unless="${#lists.isEmpty(recentRuns)}">
+                <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Suite</th>
+                    <th>Browser</th>
+                    <th>Env</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="run : ${recentRuns}">
+                    <td><code th:text="${run.runId}"></code></td>
+                    <td th:text="${run.suite}"></td>
+                    <td th:text="${run.browser}" style="text-transform:capitalize;"></td>
+                    <td th:text="${run.environment}"></td>
+                    <td>
+                        <span th:class="${'badge ' +
+                            (run.status == 'PASSED' ? 'badge-pass' :
+                             run.status == 'FAILED' ? 'badge-fail' :
+                             run.status == 'ERROR'  ? 'badge-error' : 'badge-running')}"
+                              th:text="${run.status}"></span>
+                    </td>
+                    <td th:text="${run.startedAt != null ? #temporals.format(run.startedAt, 'MMM dd, HH:mm') : '—'}"></td>
+                    <td>
+                        <a th:href="@{'/run/' + ${run.runId}}" class="btn btn-sm btn-primary"
+                           th:if="${run.status == 'RUNNING'}">View</a>
+                        <a th:href="@{'/reports/' + ${run.runId} + '/view'}" class="btn btn-sm btn-success"
+                           th:if="${run.reportPath != null}" target="_blank">Report</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

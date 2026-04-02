@@ -31,6 +31,7 @@
         <module>hag-db</module>
         <module>hag-runner</module>
         <module>hag-resource</module>
+        <module>hag-dashboard</module>
     </modules>
 
     <dependencyManagement>
