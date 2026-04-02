@@ -184,8 +184,11 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         try {
             List<Step> subscriptSteps = parseAndPrepareSteps(testName, absPath);
             StepFlowSplitter.Flow flow = StepFlowSplitter.split(subscriptSteps);
-            runMainSteps(testName, flow.main(), context);
-            runFinallySteps(testName, flow.fin(), context);
+            try {
+                runMainSteps(testName, flow.main(), context);
+            } finally {
+                runFinallySteps(testName, flow.fin(), context);
+            }
             return ExecutionResult.success();
         } catch (Exception ex) {
             return ExecutionResult.failure("Subscript failure: " + ex.getMessage());
