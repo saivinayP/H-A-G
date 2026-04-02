@@ -4,6 +4,10 @@ import com.hag.core.dispatcher.ActionRegistry;
 import com.hag.core.executor.ChangeDataStoreAction;
 import com.hag.core.executor.CompareAction;
 import com.hag.core.executor.LogAction;
+import com.hag.core.executor.control.ExecuteIfAction;
+import com.hag.core.executor.control.ExecuteEachAction;
+import com.hag.core.executor.control.RepeatAction;
+import com.hag.core.executor.control.SkipIfAction;
 
 /**
  * CoreBootstrap — registers framework-level (layer-agnostic) actions.
@@ -34,5 +38,11 @@ public final class CoreBootstrap {
 
         // Utilities
         registry.register(new LogAction());
+
+        // Control Flow
+        registry.register(new ExecuteIfAction());
+        registry.register(new ExecuteEachAction());
+        registry.register(new RepeatAction());
+        registry.register(new SkipIfAction());
     }
 }

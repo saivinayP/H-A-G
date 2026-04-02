@@ -75,6 +75,8 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
 
             // GAP-1: always inject the engine's config before validation
             context.setConfig(config);
+            context.setEngine(this);
+            context.setTestFile(testFile);
             context.validateConfiguration();
 
             long testStartTime = System.currentTimeMillis();
@@ -166,6 +168,26 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         }
     }
 
+    @Override
+    public ExecutionResult runSubscript(String testName, String subscriptPath, ExecutionContext context) {
+        Path baseDir = context.getTestFile() != null ? context.getTestFile().getParent() : java.nio.file.Paths.get("");
+        Path absPath = baseDir.resolve(subscriptPath).normalize();
+        
+        if (!java.nio.file.Files.exists(absPath)) {
+            return ExecutionResult.failure("Subscript not found: " + absPath);
+        }
+
+        try {
+            List<Step> subscriptSteps = parseAndPrepareSteps(testName, absPath);
+            StepFlowSplitter.Flow flow = StepFlowSplitter.split(subscriptSteps);
+            runMainSteps(testName, flow.main(), context);
+            runFinallySteps(testName, flow.fin(), context);
+            return ExecutionResult.success();
+        } catch (Exception ex) {
+            return ExecutionResult.failure("Subscript failure: " + ex.getMessage());
+        }
+    }
+
     private void executeSingleStep(
             String testName,
             Step step,
@@ -185,6 +207,14 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
                         step.getRecipient()
                 )
         );
+
+        if (context.isSkipNextStep()) {
+            context.setSkipNextStep(false);
+            eventPublisher.publish(new StepFinishedEvent(
+                    testName, stepIndex, "SKIPPED", startTime, 0, "Conditional skip bypass"
+            ));
+            return;
+        }
 
         try {
 
