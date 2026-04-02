@@ -41,17 +41,16 @@ public final class ValueInterpolator {
             return DataGenerator.generate(token);
         }
 
-        DataScope scope = DataScope.GLOBAL;
         String key = token;
 
+        // Legacy compat: strip scope prefix if present (e.g. UI:myVar -> myVar)
         if (token.contains(":")) {
             String[] parts = token.split(":", 2);
-            scope = DataScope.valueOf(parts[0].toUpperCase());
             key = parts[1];
         }
 
         return context.getDataStore()
-                .get(scope, key)
+                .get(key)
                 .map(Object::toString)
                 .orElseThrow(() ->
                         new IllegalStateException(

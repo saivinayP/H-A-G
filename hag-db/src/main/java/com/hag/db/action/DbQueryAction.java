@@ -1,6 +1,5 @@
 package com.hag.db.action;
 
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
@@ -73,7 +72,7 @@ public final class DbQueryAction implements Action {
             adapter.executeQuery(sql);   // result cached in adapter.getLastQueryResult()
 
             // Also store in DataStore for cross-action access
-            context.getDataStore().put(DataScope.GLOBAL, LAST_RESULT_KEY, adapter.getLastQueryResult());
+            context.getDataStore().put(LAST_RESULT_KEY, adapter.getLastQueryResult());
 
             int rowCount = adapter.getLastQueryResult() != null
                     ? adapter.getLastQueryResult().rowCount() : 0;
@@ -87,7 +86,7 @@ public final class DbQueryAction implements Action {
 
     private Map<String, Object> buildVarMap(ExecutionContext context) {
         Map<String, Object> vars = new HashMap<>();
-        context.getDataStore().snapshot().forEach((k, v) -> vars.put(k.getKey(), v));
+        context.getDataStore().snapshot().forEach(vars::put);
         return vars;
     }
 

@@ -74,7 +74,7 @@ public final class DbExecuteAction implements Action {
 
     private Map<String, Object> buildVarMap(ExecutionContext context) {
         Map<String, Object> vars = new HashMap<>();
-        context.getDataStore().snapshot().forEach((k, v) -> vars.put(k.getKey(), v));
+        context.getDataStore().snapshot().forEach(vars::put);
         return vars;
     }
 

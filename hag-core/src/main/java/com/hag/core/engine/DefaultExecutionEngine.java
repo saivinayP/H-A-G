@@ -9,8 +9,6 @@ import com.hag.core.parser.CsvTestParser;
 import com.hag.core.parser.IncludeResolver;
 import com.hag.core.result.ExecutionResult;
 import com.hag.core.reporting.engine.EventPublisher;
-import com.hag.core.reporting.events.Event;
-import com.hag.core.reporting.events.EventType;
 import com.hag.core.reporting.events.FinallyFinishedEvent;
 import com.hag.core.reporting.events.FinallyStartedEvent;
 import com.hag.core.reporting.events.StepFailedEvent;

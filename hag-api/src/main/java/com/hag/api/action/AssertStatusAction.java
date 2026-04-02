@@ -1,7 +1,6 @@
 package com.hag.api.action;
 
 import com.hag.api.model.ApiResponse;
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
@@ -89,7 +88,7 @@ public final class AssertStatusAction implements Action {
 
     private ApiResponse getLastResponse(ExecutionContext context) {
         return context.getDataStore()
-                .get(DataScope.GLOBAL, SendRequestAction.LAST_RESPONSE_KEY)
+                .get(SendRequestAction.LAST_RESPONSE_KEY)
                 .filter(v -> v instanceof ApiResponse)
                 .map(v -> (ApiResponse) v)
                 .orElse(null);
