@@ -102,7 +102,7 @@ public final class ConfigLoader {
                 intVal(execution, "retry-attempts", 1),
                 text(screenshots, "directory", "target/screenshots"),
                 text(screenshots, "level", "AT_FAILED_STEP"),
-                text(paths, "test-suite", "tests")
+                text(paths, "test-suite", "hag-resource/tests")
         );
     }
 

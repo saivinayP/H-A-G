@@ -1,6 +1,14 @@
-profile: ${HAG_ENV:local}
+profile: ${HAG_ENV:demo}
 
 environments:
+  demo:
+    url:
+      application: "https://the-internet.herokuapp.com"
+      api-base: "https://jsonplaceholder.typicode.com"
+    database:
+      url: "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
+      username: ""
+      password: ""
   local:
     url:
       application: "http://localhost:8080"
@@ -38,4 +46,4 @@ paths:
   test-data: "hag-resource/testdata"
   templates: "hag-resource/templates"
   scripts: "hag-resource/scripts"
-  test-suite: "tests"
+  test-suite: "hag-resource/tests"
