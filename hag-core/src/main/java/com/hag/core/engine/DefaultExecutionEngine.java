@@ -74,7 +74,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
         Objects.requireNonNull(context, "ExecutionContext must not be null");
 
         try {
-
+            org.slf4j.MDC.put("testName", testName);
             ExecutionContextHolder.set(context);
 
             // GAP-1: always inject the engine's config before validation
@@ -117,6 +117,7 @@ public final class DefaultExecutionEngine implements ExecutionEngine {
             }
 
         } finally {
+            org.slf4j.MDC.remove("testName");
             ExecutionContextHolder.clear();
         }
     }

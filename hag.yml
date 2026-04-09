@@ -1,0 +1,49 @@
+profile: ${HAG_ENV:demo}
+
+environments:
+  demo:
+    url:
+      application: "https://the-internet.herokuapp.com"
+      api-base: "https://jsonplaceholder.typicode.com"
+    database:
+      url: "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
+      username: ""
+      password: ""
+  local:
+    url:
+      application: "http://localhost:8080"
+      api-base: "http://localhost:8080/api"
+    database:
+      url: "jdbc:mysql://localhost:3306/hag_local"
+      username: "hag_user"
+      password: "${DB_PASSWORD:localpass}"
+  staging:
+    url:
+      application: "https://staging.myapp.com"
+      api-base: "https://api-staging.myapp.com"
+    database:
+      url: "jdbc:mysql://db.staging.internal:3306/hag_stg"
+      username: "deploy_user"
+      password: "${DB_PASSWORD:}"
+
+browser:
+  type: "chrome"
+  headless: false
+
+execution:
+  mode: "local"
+  grid-url: ""
+  thread-count: 1
+  timeout-seconds: 30
+  retry-attempts: 1
+
+screenshots:
+  directory: "target/screenshots"
+  level: "AT_FAILED_STEP"
+
+paths:
+  locators: "hag-resource/locators"
+  test-data: "hag-resource/testdata"
+  templates: "hag-resource/templates"
+  scripts: "hag-resource/scripts"
+  test-suite: "hag-resource/tests"

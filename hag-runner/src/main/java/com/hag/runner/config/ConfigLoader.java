@@ -14,86 +14,44 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Loads H-A-G config YAML files and builds a {@link FrameworkConfig}.
- *
- * <h3>Expected files (project root)</h3>
- * <ul>
- *   <li>{@code url.config.yml}       — environment URLs</li>
- *   <li>{@code runner.config.yml}    — browser, thread count, test paths</li>
- *   <li>{@code testdata.config.yml}  — file system path roots</li>
- * </ul>
- *
- * <h3>url.config.yml</h3>
- * <pre>
- * active-environment: dev
- * environments:
- *   dev:
- *     application: https://dev.myapp.com
- *     api-base:    https://api-dev.myapp.com
- * </pre>
- *
- * <h3>runner.config.yml</h3>
- * <pre>
- * browser:
- *   type: chrome
- *   headless: false
- * execution:
- *   thread-count: 1
- *   timeout-seconds: 30
- *   retry-attempts: 1
- * screenshots:
- *   directory: target/screenshots
- * reporting:
- *   json:
- *     enabled: true
- *     output-dir: TEST_RESULTS/json
- *   report-portal:
- *     enabled: false
- *     endpoint: http://localhost:8080
- *     api-token: ""
- *     project: hag-project
- *     launch-name: ""
- * </pre>
- *
- * <h3>testdata.config.yml</h3>
- * <pre>
- * paths:
- *   locators:   src/main/resources/locators
- *   test-data:  src/main/resources/testdata
- *   templates:  src/main/resources/templates
- *   scripts:    src/main/resources/scripts
- * database:
- *   url:      jdbc:mysql://localhost:3306/testdb
- *   username: qa_user
- *   password: ${env.DB_PASSWORD}
- * </pre>
+ * Loads H-A-G config from the unified hag.yml file.
  */
 public final class ConfigLoader {
 
-    private static final ObjectMapper YAML_MAPPER =
-            new ObjectMapper(new YAMLFactory());
-
-    /** Pattern that matches any ${env.VAR_NAME} token anywhere in a string. */
+    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private static final Pattern ENV_PAT = Pattern.compile("\\$\\{env\\.([^}]+)\\}");
+    private static final Pattern NEW_ENV_PAT = Pattern.compile("\\$\\{([A-ZA-z0-9_]+)(:([^}]+))?\\}");
 
     private ConfigLoader() {}
 
-    /**
-     * Loads all three config files and assembles a {@link FrameworkConfig}.
-     *
-     * @param projectRoot path to the project root (where config files live)
-     * @return fully populated {@link FrameworkConfig}
-     */
+    private static JsonNode loadRootNode(Path root) {
+        Path file = root.resolve("hag.yml");
+        if (!Files.exists(file)) {
+            throw new RuntimeException("Unified hag.yml not found at " + file.toAbsolutePath());
+        }
+        try {
+            return YAML_MAPPER.readTree(file.toFile());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read hag.yml: " + e.getMessage(), e);
+        }
+    }
+
     public static FrameworkConfig load(String projectRoot) {
         Path root = Paths.get(projectRoot).toAbsolutePath();
+        JsonNode node = loadRootNode(root);
 
-        UrlConfig      url      = loadUrlConfig(root);
-        RunnerConfig   runner   = loadRunnerConfig(root);
-        TestdataConfig testdata = loadTestdataConfig(root);
+        String activeProfile = resolveEnv(text(node, "profile", "local"));
+        JsonNode envNode = node.path("environments").path(activeProfile);
+
+        String appUrl = text(envNode.path("url"), "application", "");
+        String apiUrl = text(envNode.path("url"), "api-base", "");
+
+        RunnerConfig runner = parseRunner(node);
+        TestdataConfig testdata = parseTestdata(node, root);
 
         return new FrameworkConfigBuilder()
-                .baseUrl(url.applicationUrl())
-                .apiBaseUrl(url.apiBaseUrl())
+                .baseUrl(resolveEnv(appUrl))
+                .apiBaseUrl(resolveEnv(apiUrl))
                 .defaultWaitTimeoutSeconds(runner.timeoutSeconds())
                 .defaultRetryAttempts(runner.retryAttempts())
                 .screenshotDirectory(runner.screenshotDir())
@@ -104,133 +62,78 @@ public final class ConfigLoader {
                 .build();
     }
 
-    // ── url.config.yml ───────────────────────────────────────────────────
-
-    private static UrlConfig loadUrlConfig(Path root) {
-        Path file = root.resolve("url.config.yml");
-        if (!Files.exists(file)) return new UrlConfig("", "");
-
-        try {
-            JsonNode node = YAML_MAPPER.readTree(file.toFile());
-            String activeEnv = text(node, "active-environment", "dev");
-            JsonNode envNode = node.path("environments").path(activeEnv);
-            String appUrl = text(envNode, "application", "");
-            String apiUrl = text(envNode, "api-base", "");
-            return new UrlConfig(resolveEnv(appUrl), resolveEnv(apiUrl));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load url.config.yml: " + e.getMessage(), e);
-        }
-    }
-
-    // ── runner.config.yml ────────────────────────────────────────────────
-
-    /**
-     * Loads just the runner config, returning defaults when the file is missing.
-     * Exposed as public so HagTestBase can cache it at suite scope.
-     */
     public static RunnerConfig loadRunnerConfig(String projectRoot) {
-        return loadRunnerConfig(Paths.get(projectRoot).toAbsolutePath());
+        return parseRunner(loadRootNode(Paths.get(projectRoot).toAbsolutePath()));
     }
 
-    private static RunnerConfig loadRunnerConfig(Path root) {
-        String profile = System.getProperty("hag.profile", "config");
-        Path file = root.resolve("runner." + profile + ".yml");
-        if (!Files.exists(file)) {
-            if ("config".equals(profile)) {
-                return new RunnerConfig("chrome", false, "local", "", 30, 1, "target/screenshots", "AT_FAILED_STEP", "tests");
-            } else {
-                throw new RuntimeException("Profile file not found: " + file.toAbsolutePath());
-            }
-        }
-
-        try {
-            JsonNode node        = YAML_MAPPER.readTree(file.toFile());
-            JsonNode browser     = node.path("browser");
-            JsonNode execution   = node.path("execution");
-            JsonNode screenshots = node.path("screenshots");
-            JsonNode testSuite   = node.path("test-suite");
-
-            String  browserType  = text(browser, "type",      "chrome");
-            boolean headless     = boolVal(browser, "headless", false);
-            String  mode         = text(execution, "mode",      "local");
-            String  gridUrl      = text(execution, "grid-url",  "");
-            int     timeout      = intVal(execution, "timeout-seconds", 30);
-            int     retry        = intVal(execution, "retry-attempts",  1);
-            String  screenshotDir = text(screenshots, "directory",      "target/screenshots");
-            String  screenshotLvl = text(screenshots, "level",          "AT_FAILED_STEP");
-            String  scanRoot      = text(testSuite,   "scan-root",      "tests");
-
-            return new RunnerConfig(browserType, headless, mode, gridUrl, timeout, retry, screenshotDir, screenshotLvl, scanRoot);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load runner." + profile + ".yml: " + e.getMessage(), e);
-        }
+    public static ReportingConfig loadReportingConfig(String projectRoot) {
+        return parseReporting(loadRootNode(Paths.get(projectRoot).toAbsolutePath()));
     }
 
-    // ── testdata.config.yml ──────────────────────────────────────────────
-
-    private static TestdataConfig loadTestdataConfig(Path root) {
-        Path file = root.resolve("testdata.config.yml");
-        if (!Files.exists(file)) {
-            return new TestdataConfig(
-                    "hag-resource/testdata",
-                    "hag-resource/templates",
-                    "hag-resource/scripts",
-                    "hag-resource/locators"
-            );
-        }
-
-        try {
-            JsonNode node  = YAML_MAPPER.readTree(file.toFile());
-            JsonNode paths = node.path("paths");
-
-            String testData  = root.resolve(text(node, "test-data", text(paths, "test-data", "hag-resource/testdata"))).toString();
-            String templates = root.resolve(text(node, "api-templates", text(paths, "templates", "hag-resource/templates"))).toString();
-            String scripts   = root.resolve(text(node, "sql-scripts", text(paths, "scripts", "hag-resource/scripts"))).toString();
-            String locators  = root.resolve(text(node, "locators", text(paths, "locators", "hag-resource/locators"))).toString();
-
-            return new TestdataConfig(testData, templates, scripts, locators);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load testdata.config.yml: " + e.getMessage(), e);
-        }
+    public static DbConnectionConfig loadDbConfig(String projectRoot) {
+        JsonNode node = loadRootNode(Paths.get(projectRoot).toAbsolutePath());
+        String activeProfile = resolveEnv(text(node, "profile", "local"));
+        JsonNode dbNode = node.path("environments").path(activeProfile).path("database");
+        
+        String url = resolveEnv(text(dbNode, "url", ""));
+        String username = resolveEnv(text(dbNode, "username", ""));
+        String password = resolveEnv(text(dbNode, "password", ""));
+        return new DbConnectionConfig(url, username, password);
     }
 
-    /**
-     * Exposes the locators path for LocatorRepository configuration.
-     * Public for use in HagTestBase suite setup.
-     */
     public static String loadLocatorsPath(String projectRoot) {
         Path root = Paths.get(projectRoot).toAbsolutePath();
-        Path file = root.resolve("testdata.config.yml");
-        if (!Files.exists(file)) return "hag-resource/locators";
-        try {
-            JsonNode node  = YAML_MAPPER.readTree(file.toFile());
-            JsonNode paths = node.path("paths");
-            return root.resolve(text(paths, "locators", "hag-resource/locators")).toString();
-        } catch (IOException e) {
-            return "hag-resource/locators";
-        }
+        TestdataConfig cfg = parseTestdata(loadRootNode(root), root);
+        return cfg.locatorsPath();
     }
 
-    /**
-     * Also exposes database connection config for wiring in HagTestBase suite setup.
-     */
-    public static DbConnectionConfig loadDbConfig(String projectRoot) {
-        Path file = Paths.get(projectRoot).toAbsolutePath().resolve("testdata.config.yml");
-        if (!Files.exists(file)) return new DbConnectionConfig("", "", "");
+    private static RunnerConfig parseRunner(JsonNode node) {
+        JsonNode browser = node.path("browser");
+        JsonNode execution = node.path("execution");
+        JsonNode screenshots = node.path("screenshots");
+        JsonNode paths = node.path("paths");
 
-        try {
-            JsonNode node = YAML_MAPPER.readTree(file.toFile());
-            JsonNode db   = node.path("database");
-            String url      = resolveEnv(text(db, "url",      ""));
-            String username = resolveEnv(text(db, "username", ""));
-            String password = resolveEnv(text(db, "password", ""));
-            return new DbConnectionConfig(url, username, password);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load DB config: " + e.getMessage(), e);
-        }
+        return new RunnerConfig(
+                text(browser, "type", "chrome"),
+                boolVal(browser, "headless", false),
+                text(execution, "mode", "local"),
+                text(execution, "grid-url", ""),
+                intVal(execution, "timeout-seconds", 30),
+                intVal(execution, "retry-attempts", 1),
+                text(screenshots, "directory", "target/screenshots"),
+                text(screenshots, "level", "AT_FAILED_STEP"),
+                text(paths, "test-suite", "hag-resource/tests")
+        );
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    private static TestdataConfig parseTestdata(JsonNode node, Path root) {
+        JsonNode paths = node.path("paths");
+        String testData = root.resolve(text(paths, "test-data", "hag-resource/testdata")).toString();
+        String templates = root.resolve(text(paths, "templates", "hag-resource/templates")).toString();
+        String scripts = root.resolve(text(paths, "scripts", "hag-resource/scripts")).toString();
+        String locators = root.resolve(text(paths, "locators", "hag-resource/locators")).toString();
+        return new TestdataConfig(testData, templates, scripts, locators);
+    }
+
+    private static ReportingConfig parseReporting(JsonNode node) {
+        JsonNode reporting = node.path("reporting");
+        JsonNode jsonNode = reporting.path("json");
+        JsonNode rpNode = reporting.path("report-portal");
+
+        return new ReportingConfig(
+                new ReportingConfig.JsonConfig(
+                        boolVal(jsonNode, "enabled", false),
+                        text(jsonNode, "output-dir", "TEST_RESULTS/json")
+                ),
+                new ReportingConfig.ReportPortalConfig(
+                        boolVal(rpNode, "enabled", false),
+                        text(rpNode, "endpoint", ""),
+                        resolveEnv(text(rpNode, "api-token", "")),
+                        text(rpNode, "project", "hag-project"),
+                        text(rpNode, "launch-name", "")
+                )
+        );
+    }
 
     private static String text(JsonNode node, String field, String def) {
         JsonNode n = node.path(field);
@@ -247,77 +150,42 @@ public final class ConfigLoader {
         return n.isMissingNode() || n.isNull() ? def : n.asBoolean(def);
     }
 
-    /**
-     * RUN-3 fix: Resolves ALL {@code ${env.VAR}} tokens in a string using regex.
-     *
-     * <p>Works for embedded tokens like {@code jdbc:mysql://host/${env.DB_NAME}}.
-     * If a referenced environment variable is not set, throws an
-     * {@link IllegalStateException} with a clear diagnostic message.
-     */
     static String resolveEnv(String value) {
-        if (value == null || !value.contains("${env.")) return value;
-
-        Matcher m = ENV_PAT.matcher(value);
-        StringBuffer sb = new StringBuffer();
-        while (m.find()) {
-            String varName = m.group(1);
-            String envVal  = System.getenv(varName);
-            if (envVal == null) {
-                // Non-DB fields are optional — return raw token to allow lazy errors
-                // DB_PASSWORD missing → let JdbcDbAdapter surface it on connect
-                envVal = m.group(0);   // keep original ${env.VAR} if not set
+        if (value == null) return null;
+        
+        // Legacy ${env.XYZ} support
+        if (value.contains("${env.")) {
+            Matcher m = ENV_PAT.matcher(value);
+            StringBuffer sb = new StringBuffer();
+            while (m.find()) {
+                String varName = m.group(1);
+                String envVal = System.getenv(varName);
+                if (envVal == null) envVal = m.group(0);
+                m.appendReplacement(sb, Matcher.quoteReplacement(envVal));
             }
-            m.appendReplacement(sb, Matcher.quoteReplacement(envVal));
+            m.appendTail(sb);
+            value = sb.toString();
         }
-        m.appendTail(sb);
-        return sb.toString();
-    }
 
-    // ── Reporting config ─────────────────────────────────────────────────
-
-    /**
-     * Loads reporting configuration from {@code runner.config.yml}.
-     * Safe to call even when the file has no {@code reporting:} block — all
-     * fields default to disabled / empty.
-     *
-     * @param projectRoot path to the project root
-     */
-    public static ReportingConfig loadReportingConfig(String projectRoot) {
-        return loadReportingConfig(Paths.get(projectRoot).toAbsolutePath());
-    }
-
-    private static ReportingConfig loadReportingConfig(Path root) {
-        String profile = System.getProperty("hag.profile", "config");
-        Path file = root.resolve("runner." + profile + ".yml");
-        if (!Files.exists(file)) return ReportingConfig.disabled();
-
-        try {
-            JsonNode node       = YAML_MAPPER.readTree(file.toFile());
-            JsonNode reporting  = node.path("reporting");
-            JsonNode jsonNode   = reporting.path("json");
-            JsonNode rpNode     = reporting.path("report-portal");
-
-            boolean jsonEnabled  = boolVal(jsonNode,  "enabled",    false);
-            String  jsonOutputDir = text(jsonNode, "output-dir", "TEST_RESULTS/json");
-
-            boolean rpEnabled    = boolVal(rpNode,  "enabled",     false);
-            String  rpEndpoint   = text(rpNode, "endpoint",    "");
-            String  rpToken      = resolveEnv(text(rpNode, "api-token",   ""));
-            String  rpProject    = text(rpNode, "project",     "hag-project");
-            String  rpLaunch     = text(rpNode, "launch-name", "");
-
-            return new ReportingConfig(
-                    new ReportingConfig.JsonConfig(jsonEnabled, jsonOutputDir),
-                    new ReportingConfig.ReportPortalConfig(rpEnabled, rpEndpoint, rpToken, rpProject, rpLaunch)
-            );
-        } catch (IOException e) {
-            return ReportingConfig.disabled();
+        // Standard ${VAR:default} support
+        if (value.contains("${")) {
+            Matcher m = NEW_ENV_PAT.matcher(value);
+            StringBuffer sb = new StringBuffer();
+            while (m.find()) {
+                String varName = m.group(1);
+                String defaultVal = m.group(3) != null ? m.group(3) : "";
+                String envVal = System.getenv(varName);
+                if (envVal == null || envVal.isBlank()) envVal = defaultVal;
+                // if it's completely missing and no default, keep token to fail at connection phase if needed
+                if (envVal.isBlank() && m.group(3) == null) envVal = m.group(0);
+                m.appendReplacement(sb, Matcher.quoteReplacement(envVal));
+            }
+            m.appendTail(sb);
+            value = sb.toString();
         }
+
+        return value;
     }
-
-    // ── Inner config records ─────────────────────────────────────────────
-
-    public record UrlConfig(String applicationUrl, String apiBaseUrl) {}
 
     public record RunnerConfig(
             String browserType,
@@ -340,32 +208,17 @@ public final class ConfigLoader {
 
     public record DbConnectionConfig(String url, String username, String password) {}
 
-    /**
-     * Top-level reporting config, containing JSON and Report Portal sub-configs.
-     *
-     * @param json         JSON (NDJSON) reporter settings
-     * @param reportPortal Report Portal integration settings
-     */
     public record ReportingConfig(
             JsonConfig json,
             ReportPortalConfig reportPortal
     ) {
-        /** Returns a fully-disabled config (all engines off). */
         public static ReportingConfig disabled() {
             return new ReportingConfig(
                     new JsonConfig(false, "TEST_RESULTS/json"),
                     new ReportPortalConfig(false, "", "", "hag-project", "")
             );
         }
-
         public record JsonConfig(boolean enabled, String outputDir) {}
-
-        public record ReportPortalConfig(
-                boolean enabled,
-                String endpoint,
-                String apiToken,
-                String project,
-                String launchName
-        ) {}
+        public record ReportPortalConfig(boolean enabled, String endpoint, String apiToken, String project, String launchName) {}
     }
 }

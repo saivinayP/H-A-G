@@ -42,7 +42,7 @@ import java.time.Duration;
  * </ul>
  *
  * <h3>Configuration</h3>
- * Browser type and headless mode are read from {@code runner.config.yml} first, then
+ * Browser type and headless mode are read from {@code hag.yml} first, then
  * from system properties ({@code -Dbrowser=firefox -Dheadless=true}), then defaulting
  * to Chrome non-headless.
  *

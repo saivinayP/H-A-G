@@ -76,8 +76,10 @@ public final class DbQueryAction implements Action {
 
             client.executeQuery(sql);   // result cached in client.getLastQueryResult()
 
+            DbQueryResult result = client.getLastQueryResult();
+            
             // Also store in DataStore for cross-action access
-            context.getDataStore().put(LAST_RESULT_KEY, adapter.getLastQueryResult());
+            context.getDataStore().put(LAST_RESULT_KEY, result);
 
             return ExecutionResult.success("DB_QUERY → " + result.rowCount() + " row(s) returned");
 
