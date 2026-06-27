@@ -5,6 +5,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -95,8 +96,8 @@ public final class DataGenerator {
         throw new IllegalArgumentException("Unknown data generation token: " + functionToken);
     }
 
-    private static String randomFrom(String[] array) {
-        return array[ThreadLocalRandom.current().nextInt(array.length)];
+    private static String randomFrom(List<String> list) {
+        return list.get(ThreadLocalRandom.current().nextInt(list.size()));
     }
 
     private static String generateNumber(int length) {

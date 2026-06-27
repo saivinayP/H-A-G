@@ -102,7 +102,8 @@ public final class ConfigLoader {
                 intVal(execution, "retry-attempts", 1),
                 text(screenshots, "directory", "target/screenshots"),
                 text(screenshots, "level", "AT_FAILED_STEP"),
-                text(paths, "test-suite", "hag-resource/tests")
+                text(paths, "test-suite", "hag-resource/tests"),
+                text(execution, "target-test", "")
         );
     }
 
@@ -196,7 +197,8 @@ public final class ConfigLoader {
             int retryAttempts,
             String screenshotDir,
             String screenshotLevel,
-            String scanRoot
+            String scanRoot,
+            String targetTest
     ) {}
 
     public record TestdataConfig(

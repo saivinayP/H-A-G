@@ -36,6 +36,7 @@ execution:
   thread-count: 1
   timeout-seconds: 30
   retry-attempts: 1
+  target-test: "/demo-ui/internet_login.csv" # Enter a test name, path, or group here to run only specific tests
 
 screenshots:
   directory: "target/screenshots"

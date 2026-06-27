@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * BulkTestRunner — auto-discovers all CSV tests under configured scan roots
+ * TestRunner — auto-discovers all CSV tests under configured scan roots
  * and executes them as a single parameterised TestNG suite.
  *
  * <h3>How it works</h3>
@@ -45,14 +45,14 @@ import java.util.List;
  * <pre>{@code
  * <test name="Bulk Suite">
  *   <classes>
- *     <class name="com.hag.runner.suite.BulkTestRunner"/>
+ *     <class name="com.hag.runner.suite.TestRunner"/>
  *   </classes>
  * </test>
  * }</pre>
  */
-public class BulkTestRunner extends HagTestBase {
+public class TestRunner extends HagTestBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BulkTestRunner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TestRunner.class);
 
     @BeforeMethod(alwaysRun = true)
     public void before() {
@@ -104,11 +104,22 @@ public class BulkTestRunner extends HagTestBase {
                 (cfg != null && cfg.scanRoot() != null) ? cfg.scanRoot() : "tests");
 
         Path scanRoot = Paths.get(projectRoot).resolve(scanRootStr);
-        LOG.info("HAG BulkRunner → scanning: {}", scanRoot.toAbsolutePath());
+        LOG.info("HAG TestRunner → scanning: {}", scanRoot.toAbsolutePath());
 
         List<TestScenario> all = SuiteDiscovery.discover(scanRoot, null);
+        
+        if (cfg != null && cfg.targetTest() != null && !cfg.targetTest().isBlank()) {
+            String target = cfg.targetTest().toLowerCase();
+            all = all.stream()
+                    .filter(s -> s.testName().toLowerCase().contains(target) || 
+                                 s.csvPath().toString().toLowerCase().contains(target) || 
+                                 s.group().toLowerCase().contains(target))
+                    .toList();
+            LOG.info("HAG TestRunner → filtered scenarios to {} matching '{}'", all.size(), cfg.targetTest());
+        }
+
         if (all.isEmpty()) {
-            LOG.warn("HAG BulkRunner → no CSV tests found under: {}", scanRoot);
+            LOG.warn("HAG TestRunner → no CSV tests found under: {}", scanRoot);
             return Collections.emptyList();
         }
         return all;

@@ -8,7 +8,7 @@
     1. Smoke    — fast sanity checks (tests/login, tests/smoke)
     2. API      — API-only scenarios (tests/api)
     3. Regression — hand-authored regression tests
-    4. BulkAll  — auto-discovers every CSV under tests/ via BulkTestRunner
+    4. BulkAll  — auto-discovers every CSV under tests/ via TestRunner
 
     Usage:
       mvn test                                # runs All suite (BulkAll)
@@ -26,7 +26,7 @@
             </run>
         </groups>
         <classes>
-            <class name="com.hag.runner.suite.BulkTestRunner"/>
+            <class name="com.hag.runner.suite.TestRunner"/>
         </classes>
     </test>
 
@@ -38,7 +38,7 @@
             </run>
         </groups>
         <classes>
-            <class name="com.hag.runner.suite.BulkTestRunner"/>
+            <class name="com.hag.runner.suite.TestRunner"/>
         </classes>
     </test>
 
@@ -51,7 +51,7 @@
             </run>
         </groups>
         <classes>
-            <class name="com.hag.runner.suite.BulkTestRunner"/>
+            <class name="com.hag.runner.suite.TestRunner"/>
         </classes>
     </test>
 
@@ -63,7 +63,7 @@
             </run>
         </groups>
         <classes>
-            <class name="com.hag.runner.suite.BulkTestRunner"/>
+            <class name="com.hag.runner.suite.TestRunner"/>
         </classes>
     </test>
 
