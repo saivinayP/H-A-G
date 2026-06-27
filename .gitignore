@@ -89,4 +89,9 @@ hag-runner/TEST_RESULTS/
 data/
 *.db
 *.mv.db
-*.trace.db
+*.trace.db
+
+# =========================
+# Antigravity IDE
+# =========================
+.agents/
