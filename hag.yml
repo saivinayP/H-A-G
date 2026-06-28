@@ -4,6 +4,7 @@ environments:
   demo:
     url:
       application: "https://the-internet.herokuapp.com"
+      # application: "https://google.com"
       api-base: "https://jsonplaceholder.typicode.com"
     database:
       url: "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
@@ -36,7 +37,7 @@ execution:
   thread-count: 1
   timeout-seconds: 30
   retry-attempts: 1
-  target-test: "/demo-ui/internet_login.csv" # Enter a test name, path, or group here to run only specific tests
+  target-test: "" # Enter a test name, path, or group here to run only specific tests
 
 screenshots:
   directory: "target/screenshots"

@@ -47,7 +47,7 @@ public final class ClearFieldAction implements UiAction {
                     UiDriverExtractor.requireDriver(context.getUiAdapter());
 
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
             element.clear();
 
             return ExecutionResult.success();

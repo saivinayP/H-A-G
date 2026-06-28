@@ -65,7 +65,7 @@ public final class GetTextAction implements UiAction {
                     UiDriverExtractor.requireDriver(context.getUiAdapter());
 
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
             String text = element.getText();
 
             context.getDataStore().put(step.getKey().trim(), text);
