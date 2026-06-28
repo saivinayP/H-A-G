@@ -2,7 +2,6 @@ package com.hag.api.action;
 
 import com.hag.api.model.ApiResponse;
 import com.hag.api.util.JsonPathExtractor;
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.executor.Action;
@@ -78,13 +77,13 @@ public final class StoreDataResponseAction implements Action {
             default -> null;
         };
 
-        context.getDataStore().put(DataScope.API, variableName, value);
+        context.getDataStore().put(variableName, value);
         return ExecutionResult.success("Stored [" + variableName + "] = " + value);
     }
 
     private ApiResponse getLastResponse(ExecutionContext context) {
         return context.getDataStore()
-                .get(DataScope.GLOBAL, SendRequestAction.LAST_RESPONSE_KEY)
+                .get(SendRequestAction.LAST_RESPONSE_KEY)
                 .filter(v -> v instanceof ApiResponse)
                 .map(v -> (ApiResponse) v)
                 .orElse(null);

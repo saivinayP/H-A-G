@@ -1,6 +1,4 @@
 package com.hag.ui.action.js;
-
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
@@ -24,7 +22,6 @@ import org.openqa.selenium.WebDriver;
  *
  * Parameters:
  *   store-as=VAR_NAME  — stores the JS return value under this key in the DataStore
- *   scope=GLOBAL|TEST  — which DataStore scope to use (default: TEST)
  *
  * Example with store:
  *   Action                         | Key
@@ -69,19 +66,7 @@ public final class JsExecuteAction implements UiAction {
             // Optionally store the return value
             String storeAs = descriptor.getParameter("store-as");
             if (storeAs != null && !storeAs.isBlank()) {
-
-                String scopeParam = descriptor.getParameter("scope");
-                DataScope scope = DataScope.UI;
-
-                if (scopeParam != null) {
-                    try {
-                        scope = DataScope.valueOf(scopeParam.toUpperCase());
-                    } catch (IllegalArgumentException ignored) {
-                        // fall back to UI scope
-                    }
-                }
-
-                context.getDataStore().put(scope, storeAs.trim(), result);
+                context.getDataStore().put(storeAs.trim(), result);
             }
 
             return ExecutionResult.success();

@@ -3,7 +3,7 @@ package com.hag.runner;
 import com.hag.api.adapter.RestAssuredApiAdapter;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.engine.ExecutionEngine;
-import com.hag.db.adapter.JdbcDbAdapter;
+import com.hag.core.db.DbClientRegistry;
 import com.hag.db.bootstrap.DbBootstrap;
 import com.hag.runner.bootstrap.FrameworkBootstrap;
 import com.hag.runner.config.ConfigLoader;
@@ -18,8 +18,8 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
-import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.ITestResult;
@@ -42,7 +42,7 @@ import java.time.Duration;
  * </ul>
  *
  * <h3>Configuration</h3>
- * Browser type and headless mode are read from {@code runner.config.yml} first, then
+ * Browser type and headless mode are read from {@code hag.yml} first, then
  * from system properties ({@code -Dbrowser=firefox -Dheadless=true}), then defaulting
  * to Chrome non-headless.
  *
@@ -156,22 +156,28 @@ public abstract class HagTestBase {
                 runnerCfg != null ? runnerCfg.browserType() : "chrome");
         boolean headless = Boolean.parseBoolean(System.getProperty("headless",
                 runnerCfg != null ? String.valueOf(runnerCfg.headless()) : "false"));
+        String  mode     = System.getProperty("execution.mode",
+                runnerCfg != null ? runnerCfg.executionMode() : "local");
+        String  gridUrl  = System.getProperty("grid.url",
+                runnerCfg != null ? runnerCfg.gridUrl() : "");
 
-        setUpTest(browser, headless);
+        setUpTest(browser, headless, mode, gridUrl);
     }
 
     /**
-     * Creates a WebDriver with explicit browser + headless settings.
+     * Creates a WebDriver with explicit browser, headless, mode, and grid settings.
      *
      * @param browser  {@code chrome} | {@code firefox} | {@code edge}
      * @param headless run without a visible window
+     * @param mode     {@code local} | {@code remote}
+     * @param gridUrl  URL of the remote selenium grid
      */
-    protected void setUpTest(String browser, boolean headless) {
+    protected void setUpTest(String browser, boolean headless, String mode, String gridUrl) {
         // Create a lazy supplier for the WebDriver
         java.util.function.Supplier<WebDriver> lazyDriver = () -> {
             WebDriver d = threadDriver.get();
             if (d == null) {
-                d = createDriver(browser, headless);
+                d = createDriver(browser, headless, mode, gridUrl);
                 threadDriver.set(d);
                 
                 // Apply implicit wait timeout from config
@@ -191,11 +197,13 @@ public abstract class HagTestBase {
         context.setApiAdapter(new RestAssuredApiAdapter(true));
         context.setTestDataResolver(new com.hag.core.resolver.DefaultTestDataResolver());
 
-        // DB-1: wire DB adapter from cached config (close() called in teardown)
+        // DB — build registry from configured profiles
         DbConnectionConfig dbCfg = cachedDbConfig;
         if (dbCfg != null && dbCfg.url() != null && !dbCfg.url().isBlank()) {
-            context.setDbAdapter(DbBootstrap.createAdapter(
-                    dbCfg.url(), dbCfg.username(), dbCfg.password()));
+            DbClientRegistry registry = new DbClientRegistry();
+            registry.register(DbClientRegistry.DEFAULT_NAME,
+                    DbBootstrap.createClient(dbCfg.url(), dbCfg.username(), dbCfg.password()));
+            context.setDbClientRegistry(registry);
         }
 
         threadContext.set(context);
@@ -204,15 +212,14 @@ public abstract class HagTestBase {
     }
 
     /**
-     * Cleans up WebDriver and JDBC connection for this thread.
-     * DB-1 fix: calls {@link JdbcDbAdapter#close()} to prevent connection leaks.
+     * Cleans up WebDriver and JDBC connections for this thread.
      */
     @AfterMethod(alwaysRun = true)
     public void tearDownTest(ITestResult result) {
-        // DB-1: close JDBC connection to prevent leak
+        // Close all DB connections in the registry
         ExecutionContext ctx = threadContext.get();
-        if (ctx != null && ctx.getDbAdapter() instanceof JdbcDbAdapter db) {
-            db.close();
+        if (ctx != null && ctx.getDbClientRegistry() != null) {
+            ctx.getDbClientRegistry().closeAll();
         }
 
         WebDriver driver = threadDriver.get();
@@ -256,25 +263,53 @@ public abstract class HagTestBase {
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    private WebDriver createDriver(String browser, boolean headless) {
+    private WebDriver createDriver(String browser, boolean headless, String mode, String gridUrl) {
+        boolean isRemote = "remote".equalsIgnoreCase(mode);
+        
         return switch (browser.toLowerCase()) {
             case "firefox" -> {
-                WebDriverManager.firefoxdriver().setup();
                 FirefoxOptions opts = new FirefoxOptions();
                 if (headless) opts.addArguments("--headless");
-                yield new FirefoxDriver(opts);
+                if (isRemote) {
+                    try {
+                        yield new RemoteWebDriver(new java.net.URL(gridUrl), opts);
+                    } catch (java.net.MalformedURLException e) {
+                        throw new RuntimeException("Invalid grid URL: " + gridUrl, e);
+                    }
+                } else {
+                    WebDriverManager.firefoxdriver().setup();
+                    // Fallback to older instantiation since FirefoxDriver uses standard Options pattern but the import was removed for RemoteWebDriver.
+                    // Instead we will explicitly declare it using the fully qualified name since we removed the import
+                    yield new org.openqa.selenium.firefox.FirefoxDriver(opts);
+                }
             }
             case "edge" -> {
-                WebDriverManager.edgedriver().setup();
                 EdgeOptions opts = new EdgeOptions();
                 if (headless) opts.addArguments("--headless");
-                yield new EdgeDriver(opts);
+                if (isRemote) {
+                    try {
+                        yield new RemoteWebDriver(new java.net.URL(gridUrl), opts);
+                    } catch (java.net.MalformedURLException e) {
+                        throw new RuntimeException("Invalid grid URL: " + gridUrl, e);
+                    }
+                } else {
+                    WebDriverManager.edgedriver().setup();
+                    yield new EdgeDriver(opts);
+                }
             }
             default -> {   // chrome (default)
-                WebDriverManager.chromedriver().setup();
                 ChromeOptions opts = new ChromeOptions();
                 if (headless) opts.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-                yield new ChromeDriver(opts);
+                if (isRemote) {
+                    try {
+                        yield new RemoteWebDriver(new java.net.URL(gridUrl), opts);
+                    } catch (java.net.MalformedURLException e) {
+                        throw new RuntimeException("Invalid grid URL: " + gridUrl, e);
+                    }
+                } else {
+                    WebDriverManager.chromedriver().setup();
+                    yield new ChromeDriver(opts);
+                }
             }
         };
     }

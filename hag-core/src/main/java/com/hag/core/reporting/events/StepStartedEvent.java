@@ -8,14 +8,16 @@ public class StepStartedEvent extends Event {
     private final String actionCase;
     private final String stepType;
     private final String recipient;
+    private final String key;
 
-    public StepStartedEvent(String testName, int stepIndex, String action, String actionCase, String stepType, String recipient) {
+    public StepStartedEvent(String testName, int stepIndex, String action, String actionCase, String stepType, String recipient, String key) {
         super(EventType.STEP_STARTED, testName);
         this.stepIndex = stepIndex;
         this.action = Objects.requireNonNull(action, "action must not be null");
         this.actionCase = actionCase;
         this.stepType = Objects.requireNonNull(stepType, "stepType must not be null");
         this.recipient = recipient;
+        this.key = key;
     }
 
     public int getStepIndex() {
@@ -36,5 +38,9 @@ public class StepStartedEvent extends Event {
 
     public String getRecipient() {
         return recipient;
+    }
+
+    public String getKey() {
+        return key;
     }
 }

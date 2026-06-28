@@ -70,7 +70,7 @@ public final class SelectAction implements UiAction {
 
             By by = LocatorResolver.resolve(step.getRecipient());
 
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
             Select select = new Select(element);
 
             if (descriptor.hasFlag("text")) {

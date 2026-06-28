@@ -14,16 +14,29 @@ import com.hag.core.reporting.engine.ConsoleReportEngine;
 import com.hag.core.reporting.engine.DefaultEventPublisher;
 import com.hag.core.reporting.engine.EventPublisher;
 import com.hag.core.reporting.engine.HtmlReportEngine;
+import com.hag.core.reporting.engine.JsonEventsReporter;
+import com.hag.core.reporting.engine.ReportEngine;
+import com.hag.core.reporting.engine.ReportPortalEngine;
 import com.hag.db.bootstrap.DbBootstrap;
 import com.hag.runner.config.ConfigLoader;
+import com.hag.runner.config.ConfigLoader.ReportingConfig;
 import com.hag.ui.bootstrap.UiBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * FrameworkBootstrap — single composition root that wires the full H-A-G stack.
+ *
+ * <h3>Reporting engines (Phase 3)</h3>
+ * Two additional engines are conditionally wired based on {@code runner.config.yml}:
+ * <ul>
+ *   <li>{@link JsonEventsReporter} — enabled when {@code reporting.json.enabled: true}</li>
+ *   <li>{@link ReportPortalEngine} — enabled when {@code reporting.report-portal.enabled: true}</li>
+ * </ul>
+ * Both default to <em>disabled</em> so existing runs are unaffected.
  */
 public final class FrameworkBootstrap {
 
@@ -44,7 +57,8 @@ public final class FrameworkBootstrap {
         LOG.info("HAG → Bootstrap starting from: {}", projectRoot);
 
         // ── Config ───────────────────────────────────────────────────────
-        FrameworkConfig config = ConfigLoader.load(projectRoot);
+        FrameworkConfig  config    = ConfigLoader.load(projectRoot);
+        ReportingConfig  reporting = ConfigLoader.loadReportingConfig(projectRoot);
 
         // ── Action registry ──────────────────────────────────────────────
         DefaultActionRegistry registry = new DefaultActionRegistry();
@@ -67,13 +81,31 @@ public final class FrameworkBootstrap {
         DefaultActionDispatcher dispatcher = new DefaultActionDispatcher(registry);
         CsvTestParser           parser     = new CsvTestParser();
 
+        // ── Report engines ───────────────────────────────────────────────
+        String runName = System.getProperty("hag.run.name", "Test Execution");
+
+        List<ReportEngine> engines = new ArrayList<>();
+        engines.add(new ConsoleReportEngine());
+        engines.add(new HtmlReportEngine(runName));
+
+        if (reporting.json().enabled()) {
+            engines.add(new JsonEventsReporter(reporting.json().outputDir(), projectRoot));
+            LOG.info("HAG → JsonEventsReporter enabled → output: {}", reporting.json().outputDir());
+        }
+
+        if (reporting.reportPortal().enabled()) {
+            ReportPortalEngine.Config rpCfg = new ReportPortalEngine.Config(
+                    reporting.reportPortal().endpoint(),
+                    reporting.reportPortal().apiToken(),
+                    reporting.reportPortal().project(),
+                    reporting.reportPortal().launchName()
+            );
+            engines.add(new ReportPortalEngine(rpCfg));
+            LOG.info("HAG → ReportPortalEngine enabled → endpoint: {}", reporting.reportPortal().endpoint());
+        }
+
         // ── Event publishing ─────────────────────────────────────────────
-        EventPublisher eventPublisher = new DefaultEventPublisher(
-                List.of(
-                    new ConsoleReportEngine(),
-                    new HtmlReportEngine(System.getProperty("hag.run.name", "Test Execution"))
-                )
-        );
+        EventPublisher eventPublisher = new DefaultEventPublisher(engines);
         eventPublisher.startSuite();
 
         // ── Include resolver ─────────────────────────────────────────────
@@ -90,4 +122,4 @@ public final class FrameworkBootstrap {
                 config
         );
     }
-}
+}

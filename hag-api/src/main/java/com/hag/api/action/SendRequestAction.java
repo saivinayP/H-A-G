@@ -4,7 +4,6 @@ import com.hag.api.adapter.RestAssuredApiAdapter;
 import com.hag.api.model.ApiRequest;
 import com.hag.api.model.ApiResponse;
 import com.hag.api.template.TemplateMerger;
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.dispatcher.descriptor.ModifierSet;
@@ -84,7 +83,7 @@ public final class SendRequestAction implements Action {
             ApiResponse response = adapter.send(request);
 
             // Store response for downstream actions
-            context.getDataStore().put(DataScope.GLOBAL, LAST_RESPONSE_KEY, response);
+            context.getDataStore().put(LAST_RESPONSE_KEY, response);
 
             return ExecutionResult.success("API " + request.method() + " → " + response.statusCode());
 
@@ -96,9 +95,9 @@ public final class SendRequestAction implements Action {
     private Map<String, Object> buildVariableMap(Step step, ExecutionContext context) {
         Map<String, Object> vars = new HashMap<>();
 
-        // Seed with current DataStore global scope
+        // Seed with current DataStore
         context.getDataStore().snapshot().forEach(
-                (key, value) -> vars.put(key.getKey(), value)
+                vars::put
         );
 
         // Merge test-data block if Source column points to a file

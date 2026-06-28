@@ -2,6 +2,10 @@ package com.hag.core.context;
 
 import java.util.Objects;
 
+/**
+ * @deprecated As of CSV DSL v3, variables use a flat global namespace so string keys are used directly.
+ */
+@Deprecated
 public final class ContextKey {
     private final DataScope scope;
     private final String key;

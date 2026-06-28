@@ -23,7 +23,7 @@ public class IncludeResolver {
             Path baseDir
     ) {
         Path includePath = baseDir.resolve(includeStep.getKey());
-        List<Step> includedSteps = parser.parse(includePath);
+        List<Step> includedSteps = parser.parseSteps(includePath);
 
         eventPublisher.publish(
                 new IncludeExpandedEvent(

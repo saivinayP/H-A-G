@@ -16,12 +16,31 @@ public class ConsoleReportEngine implements ReportEngine {
 
     @Override
     public void onEvent(Event event) {
-        log.info(
-                "[{}] Test={}, Timestamp={}",
-                event.getEventType(),
-                event.getTestName(),
-                event.getTimestamp()
-        );
+        if (event instanceof com.hag.core.reporting.events.StepStartedEvent e) {
+            String baseAction = e.getAction();
+            if (baseAction != null && baseAction.contains("|")) {
+                baseAction = baseAction.substring(0, baseAction.indexOf('|'));
+            }
+            if (baseAction != null && baseAction.contains(":")) {
+                baseAction = baseAction.substring(0, baseAction.indexOf(':'));
+            }
+
+            if ("SECTION".equalsIgnoreCase(baseAction)) {
+                log.info("\n--- {} ---", e.getKey() != null ? e.getKey() : "SECTION");
+            } else if ("LOG".equalsIgnoreCase(baseAction)) {
+                log.info("ℹ {}", e.getKey() != null ? e.getKey() : "LOG");
+            } else {
+                log.info("▶ Step {}: {}", e.getStepIndex(), e.getAction());
+            }
+        } else if (event instanceof com.hag.core.reporting.events.StepFinishedEvent e) {
+            if ("WARN".equalsIgnoreCase(e.getStatus())) {
+                log.warn("⚠ Step {} WARN: {}", e.getStepIndex(), e.getMessage());
+            } else if ("FAILED".equalsIgnoreCase(e.getStatus())) {
+                log.error("❌ Step {} FAILED: {}", e.getStepIndex(), e.getMessage());
+            }
+        } else if (event instanceof com.hag.core.reporting.events.TestStartedEvent e) {
+            log.info("Testing Scenario: {}", e.getTestName());
+        }
     }
 
     @Override
