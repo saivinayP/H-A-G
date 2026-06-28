@@ -134,6 +134,7 @@ public abstract class HagTestBase {
         cachedDbConfig     = null;
         cachedRunnerConfig = null;
         LocatorRepository.clearCache();
+        com.hag.core.resolver.DefaultTestDataResolver.clearCache();
         LOG.info("HAG → Suite teardown complete");
     }
 

@@ -41,7 +41,7 @@ execution:
 
 screenshots:
   directory: "target/screenshots"
-  level: "AT_FAILED_STEP"
+  level: "AT_FAILED_STEP" # Accepted options are AT_EVERY_STEP | AT_FAILED_STEP
 
 paths:
   locators: "hag-resource/locators"

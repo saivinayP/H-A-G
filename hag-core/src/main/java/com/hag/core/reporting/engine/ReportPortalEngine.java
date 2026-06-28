@@ -208,6 +208,11 @@ public class ReportPortalEngine implements ReportEngine {
         body.put("status",  rpStatus);
 
         put("/api/v1/" + cfg.project() + "/item/" + testId, body);
+        
+        // Fix: Clean up ThreadLocal to prevent memory leak in thread pools
+        if (itemStack.get().isEmpty()) {
+            itemStack.remove();
+        }
     }
 
     // ── HTTP helpers ────────────────────────────────────────────────────────
