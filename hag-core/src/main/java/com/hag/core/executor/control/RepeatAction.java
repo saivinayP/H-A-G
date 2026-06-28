@@ -26,10 +26,16 @@ public class RepeatAction implements Action {
 
     @Override
     public ExecutionResult execute(Step step, ActionDescriptor descriptor, ExecutionContext context) {
-        if (!"N".equalsIgnoreCase(descriptor.subCase())) {
+        String subCase = descriptor.subCase();
+        String timesStr;
+        
+        if (subCase != null && subCase.matches("\\d+")) {
+            timesStr = subCase;
+        } else if ("N".equalsIgnoreCase(subCase)) {
+            timesStr = step.getRecipient();
+        } else {
             return ExecutionResult.skipped();
         }
-        String timesStr = step.getRecipient();
         String subscript = step.getSource();
 
         if (timesStr == null || timesStr.isBlank()) {

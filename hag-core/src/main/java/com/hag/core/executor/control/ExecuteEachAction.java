@@ -36,31 +36,31 @@ public class ExecuteEachAction implements Action {
         if (!"EACH".equalsIgnoreCase(descriptor.subCase())) {
             return ExecutionResult.skipped();
         }
-        String iterable = step.getRecipient(); // e.g. [1, 2, 3] or comma separated
-        String scriptParams = step.getSource(); // subscript.csv | loopVar
+        String iterableStr = step.getRecipient(); // e.g. [1, 2, 3] or variable name
+        String subscript = step.getSource(); // subscript.csv
+        String loopVar = step.getKey(); // loop alias
 
-        if (iterable == null || iterable.isBlank()) {
+        if (iterableStr == null || iterableStr.isBlank()) {
             return ExecutionResult.failure("EXECUTE:EACH requires a list in the Target column.");
         }
-        if (scriptParams == null || scriptParams.isBlank()) {
+        if (subscript == null || subscript.isBlank()) {
             return ExecutionResult.failure("EXECUTE:EACH requires a script path in the Value column.");
         }
-
-        String subscript = scriptParams;
-        String loopVar = "item";
-
-        if (scriptParams.contains("|")) {
-            String[] parts = scriptParams.split("\\|", 2);
-            subscript = parts[0].trim();
-            loopVar = parts[1].trim();
+        if (loopVar == null || loopVar.isBlank()) {
+            loopVar = "item";
         }
 
         List<Object> items;
         try {
-            if (iterable.trim().startsWith("[")) {
-                items = MAPPER.readValue(iterable, new TypeReference<List<Object>>() {});
+            java.util.Optional<Object> storedVar = context.getDataStore().get(iterableStr);
+            if (storedVar.isPresent() && storedVar.get() instanceof java.util.Collection) {
+                items = new java.util.ArrayList<>((java.util.Collection<?>) storedVar.get());
+            } else if (storedVar.isPresent() && storedVar.get().getClass().isArray()) {
+                items = java.util.Arrays.asList((Object[]) storedVar.get());
+            } else if (iterableStr.trim().startsWith("[")) {
+                items = MAPPER.readValue(iterableStr, new TypeReference<List<Object>>() {});
             } else {
-                items = Arrays.asList((Object[]) iterable.split(","));
+                items = java.util.Arrays.asList((Object[]) iterableStr.split(","));
             }
         } catch (Exception e) {
             return ExecutionResult.failure("Failed to parse iterable collection: " + e.getMessage());

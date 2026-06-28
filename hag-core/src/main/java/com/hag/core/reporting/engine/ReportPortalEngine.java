@@ -113,8 +113,8 @@ public class ReportPortalEngine implements ReportEngine {
         switch (event.getEventType()) {
             case TEST_STARTED    -> handleTestStarted((TestStartedEvent) event);
             case STEP_STARTED    -> handleStepStarted((StepStartedEvent) event);
-            case STEP_FINISHED,
-                 STEP_FAILED     -> handleStepFinished((StepFinishedEvent) event);
+            case STEP_FINISHED   -> handleStepFinished((StepFinishedEvent) event);
+            case STEP_FAILED     -> handleStepFailed((com.hag.core.reporting.events.StepFailedEvent) event);
             case TEST_FINISHED   -> handleTestFinished((TestFinishedEvent) event);
             default              -> { /* SCREENSHOT_CAPTURED, INCLUDE_EXPANDED etc. — ignored */ }
         }
@@ -178,6 +178,20 @@ public class ReportPortalEngine implements ReportEngine {
         body.put("status",  rpStatus);
         if (event.getMessage() != null && !event.getMessage().isBlank()) {
             body.put("description", event.getMessage());
+        }
+
+        put("/api/v1/" + cfg.project() + "/item/" + stepId, body);
+    }
+
+    private void handleStepFailed(com.hag.core.reporting.events.StepFailedEvent event) {
+        String stepId = itemStack.get().poll();
+        if (stepId == null) return;
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("endTime", event.getTimestamp());
+        body.put("status",  "FAILED");
+        if (event.getErrorMessage() != null && !event.getErrorMessage().isBlank()) {
+            body.put("description", event.getErrorMessage());
         }
 
         put("/api/v1/" + cfg.project() + "/item/" + stepId, body);
