@@ -59,7 +59,7 @@ H-A-G is designed with a modular architecture so components are loosely coupled.
 - **`hag-ui`**: The browser automation module. Acts as a wrapper around Selenium WebDriver, providing 23 built-in UI actions (click, input, select, wait, drag-drop, assert).
 - **`hag-api`**: The REST automation module. Powered by RestAssured, it parses JSON templates to construct and execute API requests and assert responses.
 - **`hag-db`**: The database automation module. Uses pure JDBC to connect to databases (MySQL, H2, etc.), execute SQL scripts, query data, and assert row counts or column values.
-- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `TestRunner` to dynamically execute all CSV test scenarios.
+- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations from `hag.yml`, and runs the `TestRunner` to dynamically execute all CSV test scenarios.
 
 ### Folder Structure
 After cloning, your project should look like this. You will be creating files in the areas marked `← YOU CREATE THIS`.
@@ -67,9 +67,7 @@ After cloning, your project should look like this. You will be creating files in
 ```
 H-A-G/
 │
-├── url.config.yml          ← YOU CREATE THIS (environment URLs)
-├── runner.config.yml       ← YOU CREATE THIS (test execution settings)
-├── testdata.config.yml     ← YOU CREATE THIS (file paths & DB/API config)
+├── hag.yml                 ← YOU CREATE THIS (all-in-one configuration)
 │
 ├── tests/                  ← YOU CREATE THIS (your test CSV files)
 │   ├── common/
@@ -102,81 +100,45 @@ H-A-G/
 
 ## 4. Step 1 — Set Up Configuration Files
 
-Create these three files in the project root before writing any tests.
+Create a single file named `hag.yml` in the project root before writing any tests. H-A-G uses this single source of truth for everything: environments, database connections, browser settings, and file paths.
 
-### `url.config.yml`
-
-Maps friendly names to environment URLs. You switch environments by changing `active-environment` or running with `-Denv=staging`.
+### `hag.yml`
 
 ```yaml
-active-environment: dev
+active-environment: "dev"
 
 environments:
   dev:
-    application:  https://dev.myapp.com
-    api-base:     https://api-dev.myapp.com
-
-  staging:
-    application:  https://staging.myapp.com
-    api-base:     https://api-staging.myapp.com
-
-  production:
-    application:  https://www.myapp.com
-    api-base:     https://api.myapp.com
-```
-
-### `runner.config.yml`
-
-Controls which tests run, what browser to use, parallelism, and output locations.
-
-```yaml
-test-suite:
-  - tests/login/
-  - tests/checkout/purchase_flow.csv
-  - "!tests/wip/"               # exclude folder
+    url:
+      application: "https://dev.myapp.com"
+      api-base: "https://api-dev.myapp.com"
+    database:
+      url: "jdbc:mysql://localhost:3306/testdb"
+      username: "testuser"
+      password: "${env.DB_PASSWORD}"
 
 browser:
-  type: chrome                   # chrome | firefox | edge
+  type: "chrome"                 # chrome | firefox | edge
   headless: false
-  window: maximize
 
 execution:
-  parallel-threads: 1            # increase for parallel runs
+  mode: "local"                  # local | remote
+  grid-url: ""                   # URL for Selenium Grid / BrowserStack
+  thread-count: 1                # increase for parallel runs
+  timeout-seconds: 30            # global smart wait timeout
   retry-attempts: 1
-  stop-on-failure: false
+  target-test: ""                # leave blank to run all, or specify a CSV path
 
-timeouts:
-  default-wait-seconds: 30
+screenshots:
+  directory: "target/screenshots"
+  level: "AT_FAILED_STEP"
 
-output:
-  report-dir:     target/reports/
-  screenshot-dir: target/screenshots/
-
-formats:
-  date:     dd/MM/yyyy
-  timezone: IST
-```
-
-### `testdata.config.yml`
-
-Tells H-A-G where your locators, data files, templates, and SQL scripts live.
-
-```yaml
 paths:
-  locators:       src/main/resources/locators/
-  test-data:      src/main/resources/testdata/
-  api-templates:  src/main/resources/templates/
-  sql-scripts:    src/main/resources/scripts/
-
-database:
-  driver:   com.mysql.cj.jdbc.Driver
-  url:      jdbc:mysql://localhost:3306/testdb
-  username: testuser
-  password: ${env.DB_PASSWORD}
-
-api:
-  base-url:           ${URL:api-base}
-  default-timeout-ms: 10000
+  locators: "src/main/resources/locators"
+  test-data: "src/main/resources/testdata"
+  templates: "src/main/resources/templates"
+  scripts: "src/main/resources/scripts"
+  test-suite: "tests"
 ```
 
 ---
@@ -562,7 +524,7 @@ STORE_DATA:RESPONSE,data.token,,authToken
 ### From the command line
 
 ```bash
-# Run all tests defined in runner.config.yml
+# Run all tests defined in hag.yml
 mvn clean test -pl hag-runner -am
 
 # Override the environment
@@ -785,7 +747,7 @@ ${GLOBAL:varName}     same, explicit
 ${UI:varName}         from browser layer
 ${API:varName}        from API layer
 ${DB:varName}         from database layer
-${URL:application}    URL from url.config.yml (active environment)
+${URL:application}    URL from hag.yml (active environment)
 ```
 
 ### Common Mistakes to Avoid
@@ -796,9 +758,39 @@ ${URL:application}    URL from url.config.yml (active environment)
 | Commas inside flags | Use pipe `trim,upper` → `trim\|upper` |
 | `ASSERT_VISIBLE[hidden]` | `ASSERT_HIDDEN` |
 | `SEND_REQUEST[method=GET]` | Define `"_method": "GET"` in template |
-| Hardcoding URLs | Use `${URL:application}` from `url.config.yml` |
+| Hardcoding URLs | Use `${URL:application}` from `hag.yml` |
 | Inline credentials | Use test data JSON blocks |
 
 ---
 
-*H-A-G User Guide v1.0*
+## 18. Advanced Configuration (V2 Features)
+
+### Smart Waits (Patient Capturing)
+H-A-G v2 natively implements **Smart Explicit Waits** on all core interaction steps (`CLICK`, `INPUT`, `SELECT`, `CLEAR`, `HOVER`, etc.). 
+You do not need to manually add `WAIT:VISIBLE` before interacting with elements. The framework will automatically wait up to `default-wait-seconds` for the element to become visible and interactive before acting, completely eliminating common race conditions and flakiness.
+
+### Cross-Browser & Headless Testing
+By default, H-A-G uses Chrome. You can easily switch browsers without installing drivers manually since `WebDriverManager` downloads them on the fly:
+```yaml
+browser:
+  type: firefox    # chrome | firefox | edge
+  headless: true   # Set to true for CI/CD pipelines
+```
+
+### Selenium Grid & Cloud (BrowserStack)
+To execute tests on remote cloud grids (like Selenium Grid, BrowserStack, or SauceLabs):
+1. Set execution mode to `remote` in config.
+2. Provide the grid URL:
+```yaml
+execution:
+  mode: remote
+  grid-url: "https://user:key@hub-cloud.browserstack.com/wd/hub"
+```
+
+### ReportPortal Integration
+To analyze historical results, identify flakiness over time, and utilize ML-driven defect triage, H-A-G natively integrates with **ReportPortal.io**.
+Ensure `reporting: report-portal` is enabled, and the `ReportPortalEngine` will automatically stream live results to your dashboard.
+
+---
+
+*H-A-G User Guide v2.0*

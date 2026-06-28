@@ -74,8 +74,8 @@ public final class DragDropAction implements UiAction {
             By sourceBy = LocatorResolver.resolve(step.getRecipient());
             By targetBy = LocatorResolver.resolve(resolvedTarget.toString());
 
-            WebElement source = driver.findElement(sourceBy);
-            WebElement target = driver.findElement(targetBy);
+            WebElement source = com.hag.ui.util.UiWaitHelper.awaitClickable(driver, context, sourceBy);
+            WebElement target = com.hag.ui.util.UiWaitHelper.awaitClickable(driver, context, targetBy);
 
             new Actions(driver)
                     .dragAndDrop(source, target)

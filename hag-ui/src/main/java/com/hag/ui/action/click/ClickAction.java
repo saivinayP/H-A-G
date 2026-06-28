@@ -39,7 +39,8 @@ public final class ClickAction implements UiAction {
         try {
             WebDriver driver = UiDriverExtractor.requireDriver(context.getUiAdapter());
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitClickable(driver, context, by);
             Actions actions = new Actions(driver);
 
             if (descriptor.isSubCase("DOUBLE") || descriptor.hasFlag("double")) {
