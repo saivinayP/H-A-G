@@ -59,43 +59,34 @@ cd H-A-G
 mvn clean compile
 ```
 
-### 2. Configure (three files in the project root)
+### 2. Configure (single file in the project root)
 
-**`url.config.yml`** — environment URLs
+**`hag.yml`** — all configurations (environments, browser, execution, paths)
 ```yaml
-active-environment: dev
+profile: ${HAG_ENV:demo}
+
 environments:
-  dev:
-    application: https://dev.yourapp.com
-    api-base:    https://api-dev.yourapp.com
-  staging:
-    application: https://staging.yourapp.com
-    api-base:    https://api-staging.yourapp.com
-```
+  demo:
+    url:
+      application: "https://the-internet.herokuapp.com"
+      api-base: "https://jsonplaceholder.typicode.com"
+    database:
+      url: "jdbc:h2:mem:demo_db;DB_CLOSE_DELAY=-1"
 
-**`runner.config.yml`** — browser and execution settings
-```yaml
 browser:
-  type: chrome
+  type: "chrome"
   headless: false
-execution:
-  timeout-seconds: 30
-  retry-attempts: 1
-screenshots:
-  directory: target/screenshots
-```
 
-**`testdata.config.yml`** — file paths and optional database
-```yaml
+execution:
+  mode: "local"
+  thread-count: 1
+  timeout-seconds: 30
+
 paths:
-  locators:  src/main/resources/locators
-  test-data: src/main/resources/testdata
-  templates: src/main/resources/templates
-  scripts:   src/main/resources/scripts
-database:
-  url:      ""   # jdbc:mysql://localhost:3306/testdb
-  username: ""
-  password: ""   # supports ${env.DB_PASSWORD}
+  locators: "hag-resource/locators"
+  test-data: "hag-resource/testdata"
+  templates: "hag-resource/templates"
+  test-suite: "hag-resource/tests"
 ```
 
 ### 3. Create a locator file
@@ -178,7 +169,6 @@ H-A-G is designed with a modular architecture so components are loosely coupled.
 - **`hag-db`**: The database automation module. Uses pure JDBC to connect to databases (MySQL, H2, etc.), execute SQL scripts, query data, and assert row counts or column values.
 - **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `TestRunner` to dynamically execute all CSV test scenarios without any custom Java classes required.
 
-```
 H-A-G/
 ├── hag-core/               Core framework — parser, dispatcher, DataStore, config, reporting
 ├── hag-ui/                 Selenium UI adapter
@@ -186,16 +176,14 @@ H-A-G/
 ├── hag-db/                 JDBC DB adapter
 ├── hag-runner/             TestNG runner, FrameworkBootstrap, TestRunner
 │
-├── url.config.yml          ← Environment URLs (dev / staging / prod)
-├── runner.config.yml       ← Browser, timeout, retry, screenshot dir
-├── testdata.config.yml     ← File path roots, DB connection
+├── hag.yml                 ← The Master Configuration File
 │
-├── tests/                  ← Your CSV test files go here
-└── src/main/resources/
-    ├── locators/           ← Element locator JSON files (one per page)
-    ├── testdata/           ← Test data JSON files (named blocks)
-    ├── templates/          ← API request template JSON files
-    └── scripts/            ← SQL query files (.sql)
+├── hag-resource/           ← Your test workspace
+│   ├── tests/              ← Your CSV test files go here
+│   ├── locators/           ← Element locator YAML/JSON files
+│   ├── testdata/           ← Test data JSON files
+│   ├── templates/          ← API request template JSON files
+│   └── scripts/            ← SQL query files (.sql)
 ```
 
 ---
@@ -334,6 +322,7 @@ CsvTestParser (OpenCSV)
 | Document | Description |
 |---|---|
 | [HAG User Guide](docs/HAG_User_Guide.md) | Complete step-by-step guide for writing and running tests, setting up the framework, and detailed action reference |
+| [H-A-G's Recipe Book](docs/internal/HAGs_Recipe_Book/index.md) | Zero-to-hero internal developer handbook explaining framework architecture, extension cookbooks, and debugging. |
 
 ---
 
