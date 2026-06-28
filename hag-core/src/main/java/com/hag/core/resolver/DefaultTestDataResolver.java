@@ -20,6 +20,10 @@ public class DefaultTestDataResolver
     private static final ConcurrentHashMap<String, Map<String, Object>> CACHE =
             new ConcurrentHashMap<>();
 
+    public static void clearCache() {
+        CACHE.clear();
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public Object resolve(
