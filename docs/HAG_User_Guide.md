@@ -791,6 +791,32 @@ execution:
 To analyze historical results, identify flakiness over time, and utilize ML-driven defect triage, H-A-G natively integrates with **ReportPortal.io**.
 Ensure `reporting: report-portal` is enabled, and the `ReportPortalEngine` will automatically stream live results to your dashboard.
 
+### Dynamic Data Generation
+The H-A-G engine features a built-in `DataGenerator` that intercepts special tokens across **all actions** in the framework (UI, API, and DB). This allows you to generate random test data on the fly directly inside your CSVs.
+
+Available tokens:
+- `${RANDOM_EMAIL}`
+- `${RANDOM_FIRST_NAME}`
+- `${RANDOM_LAST_NAME}`
+- `${RANDOM_PHONE}`
+- `${RANDOM_CITY}`
+
+**Usage Examples:**
+```csv
+# UI Input
+INPUT, RegistrationPage.emailField,, ${RANDOM_EMAIL}
+
+# API Request (using inside JSON templates)
+# { "email": "${RANDOM_EMAIL}" }
+SEND_REQUEST, templates/user/create.json,,
+
+# DB Inline Execution
+DB_EXECUTE:INLINE,,, INSERT INTO users (email) VALUES ('${RANDOM_EMAIL}')
+
+# Store Random Data for later
+STORE_DATA, ,, ${RANDOM_FIRST_NAME}
+```
+
 ---
 
 *H-A-G User Guide v2.0*

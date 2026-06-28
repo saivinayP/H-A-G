@@ -145,13 +145,20 @@ public class JsonEventsReporter implements ReportEngine {
                 map.put("stepType",   e.getStepType());
                 map.put("recipient",  e.getRecipient());
             }
-            case STEP_FINISHED, STEP_FAILED -> {
+            case STEP_FINISHED -> {
                 StepFinishedEvent e = (StepFinishedEvent) event;
                 map.put("stepIndex",  e.getStepIndex());
                 map.put("status",     e.getStatus());
                 map.put("durationMs", e.getDurationMs());
                 map.put("startTime",  e.getStartTime());
                 map.put("message",    e.getMessage());
+            }
+            case STEP_FAILED -> {
+                com.hag.core.reporting.events.StepFailedEvent e = (com.hag.core.reporting.events.StepFailedEvent) event;
+                map.put("stepIndex",  e.getStepIndex());
+                map.put("status",     "FAILED");
+                map.put("failureType", e.getFailureType());
+                map.put("message",    e.getErrorMessage());
             }
             default -> { /* SCREENSHOT_CAPTURED, INCLUDE_EXPANDED, FINALLY_* — base fields sufficient */ }
         }
