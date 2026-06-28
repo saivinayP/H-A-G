@@ -176,7 +176,7 @@ H-A-G is designed with a modular architecture so components are loosely coupled.
 - **`hag-ui`**: The browser automation module. Acts as a wrapper around Selenium WebDriver, providing 23 built-in UI actions (click, input, select, wait, drag-drop, assert).
 - **`hag-api`**: The REST automation module. Powered by RestAssured, it parses JSON templates to construct and execute API requests and assert responses.
 - **`hag-db`**: The database automation module. Uses pure JDBC to connect to databases (MySQL, H2, etc.), execute SQL scripts, query data, and assert row counts or column values.
-- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `BulkTestRunner` to dynamically execute all CSV test scenarios without any custom Java classes required.
+- **`hag-runner`**: The execution orchestrator. Boots up the TestNG suite, initializes configurations (`url.config.yml`, `runner.config.yml`), and runs the `TestRunner` to dynamically execute all CSV test scenarios without any custom Java classes required.
 
 ```
 H-A-G/
@@ -184,7 +184,7 @@ H-A-G/
 ├── hag-ui/                 Selenium UI adapter
 ├── hag-api/                REST adapter — RestAssured 5.4
 ├── hag-db/                 JDBC DB adapter
-├── hag-runner/             TestNG runner, FrameworkBootstrap, BulkTestRunner
+├── hag-runner/             TestNG runner, FrameworkBootstrap, TestRunner
 │
 ├── url.config.yml          ← Environment URLs (dev / staging / prod)
 ├── runner.config.yml       ← Browser, timeout, retry, screenshot dir

@@ -1,6 +1,4 @@
 package com.hag.ui.action.store;
-
-import com.hag.core.context.DataScope;
 import com.hag.core.context.ExecutionContext;
 import com.hag.core.dispatcher.descriptor.ActionDescriptor;
 import com.hag.core.model.Step;
@@ -31,8 +29,8 @@ import org.openqa.selenium.WebElement;
  *
  * Example:
  *   GET_TEXT | HomePage.WelcomeMsg | | capturedText
- *   → stores element.getText() as "capturedText" in TEST scope
- *   → reference later as ${capturedText} or ${TEST:capturedText}
+ *   → stores element.getText() as "capturedText"
+ *   → reference later as ${capturedText}
  */
 public final class GetTextAction implements UiAction {
 
@@ -67,21 +65,10 @@ public final class GetTextAction implements UiAction {
                     UiDriverExtractor.requireDriver(context.getUiAdapter());
 
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
             String text = element.getText();
 
-            // Resolve scope from parameter (default: UI)
-            DataScope scope = DataScope.UI;
-            String scopeParam = descriptor.getParameter("scope");
-            if (scopeParam != null && !scopeParam.isBlank()) {
-                try {
-                    scope = DataScope.valueOf(scopeParam.toUpperCase());
-                } catch (IllegalArgumentException ignored) {
-                    // fall back to UI scope
-                }
-            }
-
-            context.getDataStore().put(scope, step.getKey().trim(), text);
+            context.getDataStore().put(step.getKey().trim(), text);
 
             return ExecutionResult.success();
 

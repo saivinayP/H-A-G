@@ -49,7 +49,7 @@ public final class HoverAction implements UiAction {
                     UiDriverExtractor.requireDriver(context.getUiAdapter());
 
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
 
             new Actions(driver)
                     .moveToElement(element)

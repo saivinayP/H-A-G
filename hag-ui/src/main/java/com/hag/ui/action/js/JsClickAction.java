@@ -49,7 +49,7 @@ public final class JsClickAction implements UiAction {
                     UiDriverExtractor.requireDriver(context.getUiAdapter());
 
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitPresence(driver, context, by);
 
             ((JavascriptExecutor) driver)
                     .executeScript("arguments[0].click();", element);

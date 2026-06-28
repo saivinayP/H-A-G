@@ -41,7 +41,8 @@ public final class InputTextAction implements UiAction {
         try {
             WebDriver driver = UiDriverExtractor.requireDriver(context.getUiAdapter());
             By by = LocatorResolver.resolve(step.getRecipient());
-            WebElement element = driver.findElement(by);
+            
+            WebElement element = com.hag.ui.util.UiWaitHelper.awaitVisible(driver, context, by);
             ModifierSet mods = step.getModifiers();
 
             // INPUT:KEY — send a special keyboard key
